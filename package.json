@@ -1,0 +1,30 @@
+{
+  "name": "rs-cardstore",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SharaIsabell/rs-cardstore.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SharaIsabell/rs-cardstore/issues"
+  },
+  "homepage": "https://github.com/SharaIsabell/rs-cardstore#readme",
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "mysql2": "^3.14.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
