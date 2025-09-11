@@ -1,0 +1,85 @@
+.pokemon-page {
+  --pkm-gold-outer: #caa34a;
+  --pkm-gold-inner: #f5d76e;
+  --pkm-gold-stroke: #9c7b2f;
+  --pkm-blue: #2a4e8a;
+  --pkm-blue-soft: #9ec0ff;
+  --pkm-card-bg: #fcfbf4; 
+  --pkm-pokebola-url: url('https://png.pngtree.com/png-vector/20220623/ourmid/pngtree-pokemon-game-symbol-pikachu-play-png-image_5289221.png');
+  --pkm-cardback-url: url('https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/4f7705ec-8c49-4eed-a56e-c21f3985254c/dah43cy-a8e121cb-934a-40f6-97c7-fa2d77130dd5.png/v1/fill/w_759,h_1053/pokemon_card_backside_in_high_resolution_by_atomicmonkeytcg_dah43cy-pre.png?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTQyMCIsInBhdGgiOiJcL2ZcLzRmNzcwNWVjLThjNDktNGVlZC1hNTZlLWMyMWYzOTg1MjU0Y1wvZGFoNDNjeS1hOGUxMjFjYi05MzRhLTQwZjYtOTdjNy1mYTJkNzcxMzBkZDUucG5nIiwid2lkdGgiOiI8PTEwMjQifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.9GzaYS7sd8RPY5FlHca09J9ZQZ9D9zI69Ru-BsbkLDA');
+}
+
+.pokemon-page .floating-cards .card {
+  background: var(--pkm-cardback-url) center / cover no-repeat;
+  border: 1px solid rgba(24, 16, 8, 0.55);
+  border-radius: 12px;                
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  image-rendering: auto;
+  will-change: transform;
+}
+
+.pokemon-page .floating-cards .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 0 30px rgba(0, 0, 0, 0.35);
+}
+
+body.dark-mode.pokemon-page .floating-cards .card {
+  filter: brightness(0.95) saturate(1.05);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.pokemon-page {
+  --pkm-gold-outer: #caa34a;
+  --pkm-gold-inner: #f5d76e;
+  --pkm-gold-stroke: #9c7b2f;
+  --pkm-blue: #2a4e8a;
+  --pkm-blue-soft: #9ec0ff;
+  --pkm-card-bg: #fcfbf4;
+}
+
+.pokemon-page .product-card:hover {
+  box-shadow:
+    0 0 0 3px var(--pkm-blue),
+    inset 0 0 0 2px var(--pkm-gold-stroke),
+    0 16px 28px rgba(0,0,0,.18);
+  transform: translateY(-2px);
+}
+
+.pokemon-page .product-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.65) 0 26%, transparent 27%) center/100% 100% no-repeat;
+  background: url("https://cdn.pixabay.com/photo/2016/07/23/13/21/pokemon-1536855_640.png") 
+  center/99% no-repeat;
+  opacity: .14;          
+  z-index: -1;
+  pointer-events: none;
+}
+
+.pokemon-page .product-toolbar {
+  position: relative;
+  z-index: 1;
+  overflow: hidden; 
+}
+
+.pokemon-page .product-toolbar::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 15px; 
+  transform: translateY(-50%) rotate(8deg); 
+  width: 80px;
+  height: 115px;
+  background: var(--pkm-pokebola-url) center / cover no-repeat;
+  border-radius: 8px;
+  opacity: 0.22; 
+  pointer-events: none; 
+  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+}

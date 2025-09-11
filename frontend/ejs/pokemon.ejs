@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magic: The Gathering - RS Card Store</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/pokemon.css">
+</head>
+<body class="pokemon-page">
+    <header class="main-header">
+        <div class="container header-content">
+            <a href="/" class="logo">RS<span>CardStore</span></a>
+            
+            <nav class="main-nav">
+                <a href="/magic">Magic: The Gathering</a>
+                <a href="/yugioh">Yu-Gi-Oh!</a>
+                <a href="/pokemon">Pokémon TCG</a>
+                <a href="#">Acessórios</a>
+                <a href="#">Promoções</a>
+            </nav>
+
+            <div class="header-actions">
+                <a href="#" aria-label="Minha Conta"><i class="fa-solid fa-user"></i></a>
+                <a href="#" aria-label="Carrinho de Compras"><i class="fa-solid fa-cart-shopping"></i></a>
+                
+                <div class="theme-switch-wrapper">
+                    <label class="theme-switch" for="theme-checkbox">
+                        <input type="checkbox" id="theme-checkbox" />
+                        <div class="slider round">
+                            <i class="fa-solid fa-moon"></i>
+                            <i class="fa-solid fa-sun"></i>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="floating-cards">
+                <div class="card card-1"></div>
+                <div class="card card-2"></div>
+                <div class="card card-3"></div>
+                <div class="card card-4"></div>
+                <div class="card card-5"></div>
+            </div>
+
+            <div class="container hero-content"> <h1>Pokémon</h1>
+                <p>Venha capturar nossos produtos. Temos que pegar!</p>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="product-toolbar">
+                    <div class="filter-controls">
+                        <select name="tipo_produto" id="tipo_produto">
+                            <option value="">Tipo de Produto</option>
+                            <option value="booster">Boosters</option>
+                            <option value="deck">Decks</option>
+                            <option value="carta">Cartas Avulsas</option>
+                            <option value="acessorio">Acessórios</option>
+                        </select>
+                        <select name="edicao" id="edicao">
+                            <option value="">Todas as Edições</option>
+                            <option value="otj">Outlaws of Thunder Junction</option>
+                            <option value="mkm">Murders at Karlov Manor</option>
+                            <option value="lci">The Lost Caverns of Ixalan</option>
+                        </select>
+                    </div>
+                    <div class="sort-options">
+                        <label for="sort">Ordenar por:</label>
+                        <select name="sort" id="sort">
+                            <option value="relevancia">Relevância</option>
+                            <option value="preco-menor">Menor Preço</option>
+                            <option value="preco-maior">Maior Preço</option>
+                            <option value="recentes">Mais Recentes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="products-grid">
+                    
+                    <div class="product-card">
+                        <div class="product-badge" style="background-color: var(--color-orange-vibrant);">
+                            NOVO
+                        </div>
+                        <a href="/produto/1" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="data:image/jpeg;base64,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" alt="Play Booster - Outlaws of Thunder Junction">
+                            </div>
+                            <div>
+                                <h4>Play Booster - Outlaws of Thunder Junction</h4>
+                                <div class="product-price">R$ 34,90</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/1" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <a href="/produto/2" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/O6Sle2R.png" alt="Deck Commander - Bloomburrow: Animated Army">
+                            </div>
+                            <div>
+                                <h4>Deck Commander - Bloomburrow: Animated Army</h4>
+                                <div class="product-price">R$ 299,90</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/2" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <div class="product-badge" style="background-color: var(--color-orange-vibrant);">
+                            MAIS VENDIDO
+                        </div>
+                        <a href="/produto/3" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/TUE3G3S.png" alt="Carta Avulsa - Sheoldred, the Apocalypse">
+                            </div>
+                            <div>
+                                <h4>Carta Avulsa - Sheoldred, the Apocalypse</h4>
+                                <div class="product-price">R$ 450,00</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/3" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <div class="product-badge" style="background-color: #e74c3c;">
+                            PROMO
+                        </div>
+                        <a href="/produto/4" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/vHslKEI.png" alt="Bundle - Murders at Karlov Manor">
+                            </div>
+                            <div>
+                                <h4>Bundle - Murders at Karlov Manor</h4>
+                                <div class="product-price">R$ 249,90</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/4" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <a href="/produto/5" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/9l2S27i.png" alt="Playmat - Omenpath">
+                            </div>
+                            <div>
+                                <h4>Playmat - Omenpath</h4>
+                                <div class="product-price">R$ 129,90</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/5" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <div class="product-badge" style="background-color: var(--color-orange-vibrant);">
+                            NOVO
+                        </div>
+                        <a href="/produto/6" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/k9b1s2R.png" alt="Play Booster - Modern Horizons 3">
+                            </div>
+                            <div>
+                                <h4>Play Booster - Modern Horizons 3</h4>
+                                <div class="product-price">R$ 59,90</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/6" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <a href="/produto/7" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/nJqx9bS.png" alt="Deck Commander - Veloci-Ramp-Tor">
+                            </div>
+                            <div>
+                                <h4>Deck Commander - Veloci-Ramp-Tor</h4>
+                                <div class="product-price">R$ 319,90</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/7" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+
+                    <div class="product-card">
+                        <a href="/produto/8" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img src="https://i.imgur.com/i9v4Xe6.png" alt="Carta Avulsa - Orcish Bowmasters">
+                            </div>
+                            <div>
+                                <h4>Carta Avulsa - Orcish Bowmasters</h4>
+                                <div class="product-price">R$ 280,00</div>
+                            </div>
+                        </a>
+                        <a href="/carrinho/adicionar/8" class="cta-button">Adicionar ao Carrinho</a>
+                    </div>
+                </div>
+
+                <nav class="pagination">
+                    <ul>
+                        <li><a href="#" class="prev disabled">Anterior</a></li>
+                        <li><a href="#" class="active">1</a></li>
+                        <li><a href="#">2</a></li>
+                        <li><a href="#">3</a></li>
+                        <li><a href="#" class="next">Próxima</a></li>
+                    </ul>
+                </nav>
+
+            </div>
+        </section>
+    </main>
+    
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>RS Card Store</h4>
+                    <ul>
+                        <li><a href="#">Sobre Nós</a></li>
+                        <li><a href="#">Políticas da Loja</a></li>
+                        <li><a href="#">Trabalhe Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Ajuda e Suporte</h4>
+                    <ul>
+                        <li><a href="#">Como Comprar</a></li>
+                        <li><a href="#">Acompanhar Pedido</a></li>
+                        <li><a href="#">Trocas e Devoluções</a></li>
+                        <li><a href="#">Perguntas Frequentes</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Formas de Pagamento</h4>
+                    <p>Aceitamos Cartão de Crédito, Débito e Pix.</p>
+                </div>
+                <div class="footer-column">
+                    <h4>Siga-nos</h4>
+                    <div class="social-icons">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2025 RS Card Store | CNPJ: XX.XXX.XXX/0001-XX. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        const themeSwitch = document.getElementById('theme-checkbox');
+        const body = document.body;
+        const applyTheme = () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeSwitch.checked = true;
+            } else {
+                body.classList.remove('dark-mode');
+                themeSwitch.checked = false;
+            }
+        };
+        const handleThemeChange = (event) => {
+            if (event.target.checked) {
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        };
+        if (themeSwitch) {
+            themeSwitch.addEventListener('change', handleThemeChange);
+        }
+        document.addEventListener('DOMContentLoaded', applyTheme);
+    </script>
+
+</body>
+</html>

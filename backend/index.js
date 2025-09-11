@@ -13,4 +13,8 @@ router.get('/yugioh', (req, res) => {
     res.render('yugioh');
 });
 
+router.get('/pokemon', (req, res) => {
+    res.render('pokemon');
+});
+
 module.exports = router;
