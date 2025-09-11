@@ -2,11 +2,240 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title><%= titulo %></title>
-  <link rel="stylesheet" href="../css/home.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RS Card Store - Sua Loja de Card Games</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../css/index.css">
 </head>
 <body>
-  <h1>Bem-vindo ao projeto RS-CardStore!</h1>
-  <script src="/js/home.js"></script>
+  <header class="main-header">
+        <div class="container header-content">
+            <a href="#" class="logo">RS<span>CardStore</span></a>
+            
+            <nav class="main-nav">
+                <a href="#">Magic: The Gathering</a>
+                <a href="#">Yu-Gi-Oh!</a>
+                <a href="#">Pokémon TCG</a>
+                <a href="#">Acessórios</a>
+                <a href="#">Promoções</a>
+            </nav>
+
+            <div class="header-actions">
+              <a href="#" aria-label="Minha Conta"><i class="fa-solid fa-user"></i></a>
+              <a href="#" aria-label="Carrinho de Compras"><i class="fa-solid fa-cart-shopping"></i></a>
+              
+              <div class="theme-switch-wrapper">
+                <label class="theme-switch" for="theme-checkbox">
+                    <input type="checkbox" id="theme-checkbox" />
+                    <div class="slider round">
+                        <i class="fa-solid fa-moon"></i>
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+                </label>
+            </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+          <div class="floating-cards">
+              <div class="card card-1"></div>
+              <div class="card card-2"></div>
+              <div class="card card-3"></div>
+              <div class="card card-4"></div>
+              <div class="card card-5"></div>
+          </div>
+
+          <div class="container hero-content">
+              <h1>DOMINE O JOGO. COLECIONE LENDAS.</h1>
+              <p>Explore nosso arsenal de cartas raras, decks prontos e promoções imperdíveis para levar sua coleção ao próximo nível!</p>
+              <a href="#" class="cta-button">EXPLORAR CATÁLOGO</a>
+          </div>
+      </section>
+
+        <section class="section">
+            <div class="container">
+                <h2 class="section-title">Navegue por Jogo</h2>
+                <div class="categories-grid">
+                    <div class="category-card">
+                        <img src="https://m.media-amazon.com/images/I/71ifCaWlPoL._UF1000,1000_QL80_.jpg" alt="Magic The Gathering">
+                        <div class="category-card-content">
+                            <h3>Magic: The Gathering</h3>
+                            <a href="#" class="btn-secondary">Ver Produtos</a>
+                        </div>
+                    </div>
+                    <div class="category-card">
+                        <img src="https://wallpapercave.com/wp/wp11622490.jpg" alt="Yu-Gi-Oh!">
+                        <div class="category-card-content">
+                            <h3>Yu-Gi-Oh!</h3>
+                            <a href="#" class="btn-secondary">Ver Produtos</a>
+                        </div>
+                    </div>
+                    <div class="category-card">
+                        <img src="https://tcg.pokemon.com/assets/img/sv-expansions/black-white/header/header/hero-image/zsv-10pt5-large-up.jpg" alt="Pokémon TCG">
+                        <div class="category-card-content">
+                            <h3>Pokémon TCG</h3>
+                            <a href="#" class="btn-secondary">Ver Produtos</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section featured-products">
+            <div class="container">
+                <h2 class="section-title">Destaques da Semana</h2>
+                <div class="products-grid">
+                    <div class="product-card">
+                        <div class="product-badge">NOVO</div>
+                        <div class="product-image-container">
+                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPXTVMmzt4fUPaaI34J33zs7kzshfe3TOkCA&s" alt="Produto 1">
+                        </div>
+                        <div>
+                            <h4>Booster Coleção Escarlate e Violeta</h4>
+                            <div class="product-price">R$ 29,90</div>
+                            <a href="#" class="cta-button">Adicionar ao Carrinho</a>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-badge" style="background-color: #e74c3c;">PROMO</div>
+                        <div class="product-image-container">
+                            <img src="https://i.imgur.com/9l2S27i.png" alt="Produto 2">
+                        </div>
+                        <div>
+                            <h4>Deck Estrutural Lenda das Feras</h4>
+                            <div class="product-price">R$ 54,90</div>
+                            <a href="#" class="cta-button">Adicionar ao Carrinho</a>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                        <div class="product-image-container">
+                           <img src="https://i.imgur.com/nJqx9bS.png" alt="Produto 3">
+                        </div>
+                        <div>
+                            <h4>Sleeves Protetores Dragon Shield (100 Un)</h4>
+                            <div class="product-price">R$ 79,90</div>
+                            <a href="#" class="cta-button">Adicionar ao Carrinho</a>
+                        </div>
+                    </div>
+                    <div class="product-card">
+                         <div class="product-image-container">
+                           <img src="https://i.imgur.com/O6Sle2R.png" alt="Produto 4">
+                        </div>
+                        <div>
+                            <h4>Deck Commander Masters: Eldrazi Unbound</h4>
+                            <div class="product-price">R$ 349,99</div>
+                            <a href="#" class="cta-button">Adicionar ao Carrinho</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="container">
+                <div class="benefits-grid">
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-star"></i>
+                        <h3>Programa de Fidelidade</h3>
+                        <p>A cada 10 compras, ganhe um cupom de desconto exclusivo!</p>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <h3>Pagamento Seguro</h3>
+                        <p>Pague com Pix ou Cartão. Seus dados 100% protegidos.</p>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <h3>Entrega em todo o Brasil</h3>
+                        <p>Receba seus produtos com agilidade e segurança onde estiver.</p>
+                    </div>
+                    <div class="benefit-item">
+                        <i class="fa-solid fa-file-contract"></i>
+                        <h3>Conformidade LGPD</h3>
+                        <p>Respeitamos sua privacidade em uma plataforma totalmente segura.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h4>RS Card Store</h4>
+                    <ul>
+                        <li><a href="#">Sobre Nós</a></li>
+                        <li><a href="#">Políticas da Loja</a></li>
+                        <li><a href="#">Trabalhe Conosco</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Ajuda e Suporte</h4>
+                    <ul>
+                        <li><a href="#">Como Comprar</a></li>
+                        <li><a href="#">Acompanhar Pedido</a></li>
+                        <li><a href="#">Trocas e Devoluções</a></li>
+                        <li><a href="#">Perguntas Frequentes</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Formas de Pagamento</h4>
+                    <p>Aceitamos Cartão de Crédito, Débito e Pix.</p>
+                </div>
+                <div class="footer-column">
+                    <h4>Siga-nos</h4>
+                    <div class="social-icons">
+                        <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2025 RS Card Store | CNPJ: XX.XXX.XXX/0001-XX. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+    <script>
+        // Seleciona os elementos do DOM
+        const themeSwitch = document.getElementById('theme-checkbox');
+        const body = document.body;
+
+        // Função para aplicar o tema correto na inicialização
+        const applyTheme = () => {
+            const savedTheme = localStorage.getItem('theme');
+            // Se o tema salvo for 'dark', aplica a classe e MARCA o checkbox
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeSwitch.checked = true;
+            } else {
+                body.classList.remove('dark-mode');
+                themeSwitch.checked = false;
+            }
+        };
+
+        // Adiciona o "ouvinte" para o evento de MUDANÇA (change) no checkbox
+        themeSwitch.addEventListener('change', (event) => {
+            // Verifica se o switch está marcado (checked)
+            if (event.target.checked) {
+                body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+            }
+        });
+
+        // Aplica o tema correto assim que a página é carregada
+        document.addEventListener('DOMContentLoaded', applyTheme);
+    </script>
 </body>
 </html>
