@@ -9,4 +9,8 @@ router.get('/magic', (req, res) => {
     res.render('magic');
 });
 
+router.get('/yugioh', (req, res) => {
+    res.render('yugioh');
+});
+
 module.exports = router;
