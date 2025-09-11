@@ -5,4 +5,8 @@ router.get('/', (req, res) => {
   res.render('index', { titulo: 'Página Inicial' });
 });
 
+router.get('/magic', (req, res) => {
+    res.render('magic');
+});
+
 module.exports = router;
