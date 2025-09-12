@@ -24,7 +24,7 @@
         <a href="/yugioh">Yu-Gi-Oh!</a>
         <a href="/pokemon">Pokémon TCG</a>
         <a href="/acessorios" class="active">Acessórios</a>
-        <a href="#">Promoções</a>
+        <a href="/promocoes">Promoções</a>
       </nav>
 
       <div class="header-actions">
@@ -45,9 +45,7 @@
   </header>
 
   <main>
-    <!-- HERO convidativo -->
     <section class="hero" style="--gradient-start: rgba(10,36,99,0.95); --gradient-end: rgba(255,159,28,0.95);">
-      <!-- elementos flutuantes (usar cartas translúcidas do index.css para manter a linguagem visual) -->
       <div class="floating-cards" aria-hidden="true">
         <div class="card card-1" style="--r-start:-10deg; --r-end:-14deg;"></div>
         <div class="card card-2" style="--r-start:12deg; --r-end:16deg;"></div>
@@ -62,10 +60,8 @@
       </div>
     </section>
 
-    <!-- LISTA DE PRODUTOS -->
     <section class="section" id="lista-acessorios">
       <div class="container">
-        <!-- Toolbar com filtros e pequenos ícones para reforçar o tema -->
         <div class="product-toolbar">
           <div class="filter-controls">
             <select name="tipo_produto" id="tipo_produto">
@@ -87,7 +83,6 @@
             </select>
           </div>
 
-          <!-- ícones sugestivos (somente UI/ornamentais) -->
           <div class="sort-options">
             <label for="sort">Ordenar por:</label>
             <select name="sort" id="sort">
@@ -99,7 +94,6 @@
           </div>
         </div>
 
-        <!-- GRID DE PRODUTOS (exemplos estáticos) -->
         <div class="products-grid">
           <div class="product-card">
             <div class="product-badge">NOVO</div>
@@ -208,7 +202,6 @@
           </div>
         </div>
 
-        <!-- paginação -->
         <nav class="pagination" aria-label="Paginação de acessórios">
           <ul>
             <li><a href="#" class="prev disabled">Anterior</a></li>
@@ -222,7 +215,6 @@
     </section>
   </main>
 
-  <!-- FOOTER -->
   <footer class="main-footer">
     <div class="container">
       <div class="footer-content">
@@ -262,7 +254,6 @@
     </div>
   </footer>
 
-  <!-- THEME SWITCH -->
   <script>
     const themeSwitch = document.getElementById('theme-checkbox');
     const body = document.body;

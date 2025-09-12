@@ -61,4 +61,8 @@ router.get('/acessorios', (req, res) => {
     res.render('acessorios');
 });
 
+router.get('/promocoes', (req, res) => {
+    res.render('promocoes');
+});
+
 module.exports = router;
