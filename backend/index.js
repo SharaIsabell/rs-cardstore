@@ -90,6 +90,28 @@ router.get('/pokemon', async (req, res) => {
   }
 });
 
+router.get('/produto/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [rows] = await db.query(
+      `SELECT id, nome, descricao, preco, imagem_url, categoria, estoque 
+         FROM produtos 
+        WHERE id = ?`,
+      [id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).send('Produto não encontrado.');
+    }
+
+    res.render('produto', { produto: rows[0] });
+  } catch (err) {
+    console.error('Erro ao carregar o produto:', err);
+    res.status(500).send('Erro ao carregar a página do produto.');
+  }
+});
+
+
 router.get('/acessorios', async (req, res) => {
   try {
     const [rows] = await db.query(
