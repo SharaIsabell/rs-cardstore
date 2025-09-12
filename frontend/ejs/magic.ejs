@@ -87,124 +87,39 @@
                 </div>
 
                 <div class="products-grid">
-                    
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: var(--color-orange-vibrant);">
-                            NOVO
+                    <% if (typeof produtos !== 'undefined' && produtos.length) { %>
+                        <% produtos.forEach(p => { %>
+                        <div class="product-card">
+                            <% if (p.novo) { %>
+                            <div class="product-badge" style="background-color: var(--color-orange-vibrant);">NOVO</div>
+                            <% } else if (p.promocao) { %>
+                            <div class="product-badge" style="background-color: #e74c3c;">PROMO</div>
+                            <% } %>
+
+                            <a href="/produto/<%= p.id %>" class="product-link-wrapper">
+                            <div class="product-image-container">
+                                <img
+                                src="<%= p.imagem_url || 'https://via.placeholder.com/400x400?text=Magic' %>"
+                                alt="<%= p.nome %>">
+                            </div>
+                            <div>
+                                <h4><%= p.nome %></h4>
+                                <div class="product-price">
+                                R$ <%= Number(p.preco).toFixed(2).replace('.', ',') %>
+                                </div>
+                            </div>
+                            </a>
+
+                            <a href="/carrinho/adicionar/<%= p.id %>" class="cta-button">Adicionar ao Carrinho</a>
                         </div>
-                        <a href="/produto/1" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/uG0h2vT.png" alt="Play Booster - Outlaws of Thunder Junction">
-                            </div>
-                            <div>
-                                <h4>Play Booster - Outlaws of Thunder Junction</h4>
-                                <div class="product-price">R$ 34,90</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/1" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <a href="/produto/2" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/O6Sle2R.png" alt="Deck Commander - Bloomburrow: Animated Army">
-                            </div>
-                            <div>
-                                <h4>Deck Commander - Bloomburrow: Animated Army</h4>
-                                <div class="product-price">R$ 299,90</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/2" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: var(--color-orange-vibrant);">
-                            MAIS VENDIDO
+                        <% }) %>
+                    <% } else { %>
+                        <div class="empty-state">
+                        <p>Nenhum produto de Magic disponível no momento.</p>
                         </div>
-                        <a href="/produto/3" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/TUE3G3S.png" alt="Carta Avulsa - Sheoldred, the Apocalypse">
-                            </div>
-                            <div>
-                                <h4>Carta Avulsa - Sheoldred, the Apocalypse</h4>
-                                <div class="product-price">R$ 450,00</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/3" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: #e74c3c;">
-                            PROMO
-                        </div>
-                        <a href="/produto/4" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/vHslKEI.png" alt="Bundle - Murders at Karlov Manor">
-                            </div>
-                            <div>
-                                <h4>Bundle - Murders at Karlov Manor</h4>
-                                <div class="product-price">R$ 249,90</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/4" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <a href="/produto/5" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/9l2S27i.png" alt="Playmat - Omenpath">
-                            </div>
-                            <div>
-                                <h4>Playmat - Omenpath</h4>
-                                <div class="product-price">R$ 129,90</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/5" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: var(--color-orange-vibrant);">
-                            NOVO
-                        </div>
-                        <a href="/produto/6" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/k9b1s2R.png" alt="Play Booster - Modern Horizons 3">
-                            </div>
-                            <div>
-                                <h4>Play Booster - Modern Horizons 3</h4>
-                                <div class="product-price">R$ 59,90</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/6" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <a href="/produto/7" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/nJqx9bS.png" alt="Deck Commander - Veloci-Ramp-Tor">
-                            </div>
-                            <div>
-                                <h4>Deck Commander - Veloci-Ramp-Tor</h4>
-                                <div class="product-price">R$ 319,90</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/7" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-
-                    <div class="product-card">
-                        <a href="/produto/8" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/i9v4Xe6.png" alt="Carta Avulsa - Orcish Bowmasters">
-                            </div>
-                            <div>
-                                <h4>Carta Avulsa - Orcish Bowmasters</h4>
-                                <div class="product-price">R$ 280,00</div>
-                            </div>
-                        </a>
-                        <a href="/carrinho/adicionar/8" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
+                    <% } %>
                 </div>
-
+                
                 <nav class="pagination">
                     <ul>
                         <li><a href="#" class="prev disabled">Anterior</a></li>
