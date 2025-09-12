@@ -32,6 +32,7 @@ async function main() {
       nome VARCHAR(100) NOT NULL,
       descricao TEXT,
       preco DECIMAL(10, 2) NOT NULL,
+      desconto_percentual DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
       imagem_url VARCHAR(255),
       categoria ENUM('Magic', 'Yu-Gi-Oh', 'Pokemon', 'Acessorios') NOT NULL,
       estado ENUM('novo', 'usado') DEFAULT 'novo',

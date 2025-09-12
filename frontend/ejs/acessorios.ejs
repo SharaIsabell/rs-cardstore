@@ -95,111 +95,62 @@
         </div>
 
         <div class="products-grid">
-          <div class="product-card">
-            <div class="product-badge">NOVO</div>
-            <a href="/produto/201" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/Kb1d9gF.png" alt="Sleeves Matte (100 unidades)"/>
-              </div>
-              <div>
-                <h4>Sleeves Matte (100 un.)</h4>
-                <div class="product-price">R$ 59,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/201" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
+          <% if (produtos && produtos.length > 0) { %>
+            <% produtos.forEach(produto => { %>
+              <div class="product-card">
 
-          <div class="product-card">
-            <a href="/produto/202" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/2Rjv2vR.png" alt="Deck Box - Magnética Premium"/>
-              </div>
-              <div>
-                <h4>Deck Box - Magnética Premium</h4>
-                <div class="product-price">R$ 129,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/202" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
+                <%# --- Badge Dinâmico: Mostra PROMO ou NOVO se aplicável --- %>
+                <% if (produto.promocao) { %>
+                  <div class="product-badge" style="background-color:#e74c3c;">PROMO</div>
+                <% } else if (produto.novo) { %>
+                  <div class="product-badge">NOVO</div>
+                <% } %>
 
-          <div class="product-card">
-            <div class="product-badge" style="background-color:#e74c3c;">PROMO</div>
-            <a href="/produto/203" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/1dE2sO2.png" alt="Playmat Antiderrapante"/>
-              </div>
-              <div>
-                <h4>Playmat Antiderrapante</h4>
-                <div class="product-price">R$ 99,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/203" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
+                <a href="/produto/<%= produto.id %>" class="product-link-wrapper">
+                  <div class="product-image-container">
+                    <img src="<%= produto.imagem_url %>" alt="<%= produto.nome %>"/>
+                  </div>
+                  <div>
+                    <h4><%= produto.nome %></h4>
+                    <%# --- Bloco de Preço Dinâmico com Desconto --- %>
+                    <div class="product-price">
+                      <% if (produto.desconto_percentual > 0) { %>
+                        <% 
+                          // Calcula o preço final
+                          const precoOriginal = produto.preco;
+                          const precoFinal = precoOriginal * (1 - produto.desconto_percentual / 100);
+                        %>
+                        
+                        <%# Preço original riscado %>
+                        <span style="text-decoration: line-through; color: #999; font-size: 0.9em;">
+                          R$ <%= parseFloat(precoOriginal).toFixed(2).replace('.', ',') %>
+                        </span>
+                        
+                        <%# Preço final com desconto %>
+                        <strong style="margin-left: 8px;">
+                          R$ <%= parseFloat(precoFinal).toFixed(2).replace('.', ',') %>
+                        </strong>
 
-          <div class="product-card">
-            <a href="/produto/204" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/9Qm9s2A.png" alt="Binder 9-Pocket - 360 Cartas"/>
-              </div>
-              <div>
-                <h4>Binder 9-Pocket (360 cartas)</h4>
-                <div class="product-price">R$ 179,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/204" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
+                      <% } else { %>
 
-          <div class="product-card">
-            <a href="/produto/205" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/4k8YqfD.png" alt="Dados & Contadores - Kit Completo"/>
+                        <%# Exibe o preço normal se não houver desconto %>
+                        <strong>R$ <%= parseFloat(produto.preco).toFixed(2).replace('.', ',') %></strong>
+                        
+                      <% } %>
+                    </div>
+                  </div>
+                </a>
+                
+                <%# --- O botão de adicionar ao carrinho agora é um formulário POST --- %>
+                <form action="/carrinho/adicionar/<%= produto.id %>" method="POST" style="display: inline;">
+                    <input type="hidden" name="quantidade" value="1">
+                    <button type="submit" class="cta-button">Adicionar ao Carrinho</button>
+                </form>
               </div>
-              <div>
-                <h4>Kit Dados & Contadores</h4>
-                <div class="product-price">R$ 49,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/205" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
-
-          <div class="product-card">
-            <a href="/produto/206" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/8e1k1rU.png" alt="Toploaders (25 un.)"/>
-              </div>
-              <div>
-                <h4>Toploaders (25 un.)</h4>
-                <div class="product-price">R$ 39,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/206" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
-
-          <div class="product-card">
-            <a href="/produto/207" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/6u3yVqK.png" alt="Organizer - Caixa Modular"/>
-              </div>
-              <div>
-                <h4>Organizer - Caixa Modular</h4>
-                <div class="product-price">R$ 89,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/207" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
-
-          <div class="product-card">
-            <a href="/produto/208" class="product-link-wrapper">
-              <div class="product-image-container">
-                <img src="https://i.imgur.com/7mZ3z2F.png" alt="Marcador de Vida - Metal"/>
-              </div>
-              <div>
-                <h4>Marcador de Vida - Metal</h4>
-                <div class="product-price">R$ 74,90</div>
-              </div>
-            </a>
-            <a href="/carrinho/adicionar/208" class="cta-button">Adicionar ao Carrinho</a>
-          </div>
+            <% }) %>
+          <% } else { %>
+            <p>Nenhum acessório encontrado no momento.</p>
+          <% } %>
         </div>
 
         <nav class="pagination" aria-label="Paginação de acessórios">

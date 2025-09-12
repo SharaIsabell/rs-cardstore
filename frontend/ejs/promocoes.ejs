@@ -81,70 +81,50 @@
                 </div>
 
                 <div class="products-grid">
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: #e74c3c;">PROMO</div>
-                        <a href="#" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/9l2S27i.png" alt="Deck Estrutural Lenda das Feras">
-                            </div>
-                            <div>
-                                <h4>Deck Estrutural Lenda das Feras</h4>
-                                <div class="product-price">
-                                    <span style="text-decoration: line-through; font-size: 1rem; color: #999;">R$ 64,90</span> R$ 54,90
-                                </div>
-                            </div>
-                        </a>
-                        <a href="#" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
+                    <% if (produtos && produtos.length > 0) { %>
+                        <% produtos.forEach(produto => { %>
+                        <div class="product-card">
 
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: #e74c3c;">15% OFF</div>
-                        <a href="#" class="product-link-wrapper">
+                            <%# --- O badge pode mostrar o desconto exato ou um "PROMO" genérico --- %>
+                            <% if (produto.desconto_percentual > 0) { %>
+                            <div class="product-badge" style="background-color: #e74c3c;"><%= Math.round(produto.desconto_percentual) %>% OFF</div>
+                            <% } else { %>
+                            <div class="product-badge" style="background-color: #e74c3c;">PROMO</div>
+                            <% } %>
+
+                            <a href="/produto/<%= produto.id %>" class="product-link-wrapper">
                             <div class="product-image-container">
-                                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQPXTVMmzt4fUPaaI34J33zs7kzshfe3TOkCA&s" alt="Booster Coleção Escarlate e Violeta">
+                                <img src="<%= produto.imagem_url || 'https://via.placeholder.com/400x400?text=Promo' %>" alt="<%= produto.nome %>">
                             </div>
                             <div>
-                                <h4>Booster Coleção Escarlate e Violeta</h4>
+                                <h4><%= produto.nome %></h4>
                                 <div class="product-price">
-                                    <span style="text-decoration: line-through; font-size: 1rem; color: #999;">R$ 34,90</span> R$ 29,90
+                                <% if (produto.desconto_percentual > 0) { %>
+                                    <% 
+                                    const precoOriginal = produto.preco;
+                                    const precoFinal = precoOriginal * (1 - produto.desconto_percentual / 100);
+                                    %>
+                                    <span style="text-decoration: line-through; color: #999; font-size: 0.9em;">
+                                    R$ <%= parseFloat(precoOriginal).toFixed(2).replace('.', ',') %>
+                                    </span>
+                                    <strong style="margin-left: 8px;">
+                                    R$ <%= parseFloat(precoFinal).toFixed(2).replace('.', ',') %>
+                                    </strong>
+                                <% } else { %>
+                                    <strong>R$ <%= parseFloat(produto.preco).toFixed(2).replace('.', ',') %></strong>
+                                <% } %>
                                 </div>
                             </div>
-                        </a>
-                        <a href="#" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-                    
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: #e74c3c;">PROMO</div>
-                         <a href="#" class="product-link-wrapper">
-                            <div class="product-image-container">
-                               <img src="https://i.imgur.com/O6Sle2R.png" alt="Deck Commander Masters: Eldrazi Unbound">
-                            </div>
-                            <div>
-                                <h4>Deck Commander Masters: Eldrazi Unbound</h4>
-                                <div class="product-price">
-                                    <span style="text-decoration: line-through; font-size: 1rem; color: #999;">R$ 399,99</span> R$ 349,99
-                                </div>
-                            </div>
-                        </a>
-                        <a href="#" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-                    
-                    <div class="product-card">
-                        <div class="product-badge" style="background-color: #e74c3c;">10% OFF</div>
-                        <a href="#" class="product-link-wrapper">
-                            <div class="product-image-container">
-                                <img src="https://i.imgur.com/nJqx9bS.png" alt="Sleeves Protetores Dragon Shield">
-                            </div>
-                            <div>
-                                <h4>Sleeves Protetores Dragon Shield (100 Un)</h4>
-                                <div class="product-price">
-                                     <span style="text-decoration: line-through; font-size: 1rem; color: #999;">R$ 89,90</span> R$ 79,90
-                                </div>
-                            </div>
-                        </a>
-                        <a href="#" class="cta-button">Adicionar ao Carrinho</a>
-                    </div>
-                     </div>
+                            </a>
+                            <a href="/carrinho/adicionar/208" class="cta-button">Adicionar ao Carrinho</a>
+                            </form>
+                        </div>
+                        <% }) %>
+                    <% } else { %>
+                        <p>Nenhuma promoção ativa no momento.</p>
+                    <% } %>
+                </div>
+
 
                 <nav class="pagination" aria-label="Navegação de página de produtos">
                     <ul>

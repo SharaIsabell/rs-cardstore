@@ -103,8 +103,22 @@
                             </div>
                             <div>
                                 <h4><%= p.nome %></h4>
+                                <%# --- ATUALIZAÇÃO: Lógica de desconto adicionada --- %>
                                 <div class="product-price">
-                                R$ <%= Number(p.preco).toFixed(2).replace('.', ',') %>
+                                <% if (p.desconto_percentual > 0) { %>
+                                        <% 
+                                        const precoOriginal = p.preco;
+                                        const precoFinal = precoOriginal * (1 - p.desconto_percentual / 100);
+                                        %>
+                                        <span style="text-decoration: line-through; color: #999; font-size: 0.9em;">
+                                        R$ <%= parseFloat(precoOriginal).toFixed(2).replace('.', ',') %>
+                                        </span>
+                                        <strong style="margin-left: 8px;">
+                                        R$ <%= parseFloat(precoFinal).toFixed(2).replace('.', ',') %>
+                                        </strong>
+                                    <% } else { %>
+                                        <strong>R$ <%= parseFloat(p.preco).toFixed(2).replace('.', ',') %></strong>
+                                    <% } %>
                                 </div>
                             </div>
                             </a>
