@@ -57,4 +57,8 @@ router.get('/pokemon', async (req, res) => {
   }
 });
 
+router.get('/acessorios', (req, res) => {
+    res.render('acessorios');
+});
+
 module.exports = router;
