@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login/Cadastro - RS Card Store</title>
+    <link rel="stylesheet" href="../css/login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="auth-container">
+        <div class="forms-container">
+            <div class="login-form">
+                <h2>Bem-vindo de volta!</h2>
+                <p>Entre para dominar o jogo.</p>
+                <form>
+                    <div class="input-group">
+                        <input type="email" id="loginEmail" required>
+                        <label for="loginEmail">Email</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="loginPassword" required>
+                        <label for="loginPassword">Senha</label>
+                    </div>
+                    <button type="submit" class="cta-button">Entrar</button>
+                </form>
+                <div class="auth-footer">
+                    <a href="#">Esqueceu a senha?</a>
+                </div>
+            </div>
+
+            <div class="register-form">
+                <h2>Crie sua conta!</h2>
+                <p>Junte-se a nós e comece a jogar.</p>
+                <form>
+                    <div class="input-group">
+                        <input type="text" id="registerUsername" required>
+                        <label for="registerUsername">Usuário</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="registerEmail" required>
+                        <label for="registerEmail">Email</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="registerPassword" required>
+                        <label for="registerPassword">Senha</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="confirmPassword" required>
+                        <label for="confirmPassword">Confirmar Senha</label>
+                    </div>
+                    <button type="submit" class="cta-button">Cadastrar</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="overlay-container">
+            <div class="overlay">
+                <div class="overlay-panel overlay-left">
+                    <h1>Já tem uma conta?</h1>
+                    <p>Para se manter conectado, faça login com suas informações.</p>
+                    <button class="ghost cta-button" id="signIn">Login</button>
+                </div>
+                <div class="overlay-panel overlay-right">
+                    <h1>Novo por aqui?</h1>
+                    <p>Cadastre-se e comece sua jornada no RS Card Store!</p>
+                    <button class="ghost cta-button" id="signUp">Cadastro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../js/particles.min.js"></script>
+    <script src="../js/login.js"></script>
+    <script src="../js/auth.js"></script>
+</body>
+</html>

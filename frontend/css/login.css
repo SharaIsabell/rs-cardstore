@@ -1,0 +1,456 @@
+/* --- Variáveis de Cor e Estilos Globais --- */
+:root {
+    --color-blue-dark: #0A2463;
+    --color-orange-vibrant: #FF9F1C;
+    --color-white: #FFFFFF;
+    --color-light-gray: #f0f0f0; /* Novo para o fundo da sobreposição */
+    --font-heading: 'Montserrat', sans-serif;
+    --font-body: 'Lato', sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--color-blue-dark);
+    color: var(--color-white);
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+#particles-js {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+/* --- Container Principal de Autenticação --- */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    position: relative;
+    width: 90%; /* Usar porcentagem para melhor responsividade inicial */
+    max-width: 900px; /* Um pouco menor para telas de desktop */
+    max-height: 600px; /* << ALTERADO: Altura máxima para a caixa */
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    overflow: hidden; /* Importante para as transições */
+}
+
+/* --- Contêiner dos Formulários (Login e Cadastro) --- */
+.forms-container {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    transition: all 0.6s ease-in-out;
+    left: 0;
+    width: 50%; /* Metade da largura do contêiner principal */
+}
+
+.login-form, .register-form {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0 2rem;
+    text-align: center;
+    background: transparent; /* Os formulários não terão fundo, o fundo será o do .auth-container */
+}
+
+/* Inicialmente o formulário de cadastro estará escondido */
+.register-form {
+    opacity: 0;
+    z-index: 1; /* Para que ele possa estar por baixo inicialmente */
+}
+.login-form {
+    z-index: 2; /* Para que ele esteja por cima inicialmente */
+}
+
+.forms-container h2 {
+    font-family: var(--font-heading);
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+    color: var(--color-white);
+}
+
+.forms-container p {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 2rem;
+    width: 100%;
+    max-width: 300px; /* Limite a largura dos inputs */
+}
+
+.input-group input {
+    width: 100%;
+    padding: 10px 0;
+    font-size: 1rem;
+    color: var(--color-white);
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+    outline: none;
+}
+
+.input-group label {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    pointer-events: none;
+    transition: 0.3s ease all;
+}
+
+.input-group input:focus ~ label,
+.input-group input:valid ~ label {
+    top: -20px;
+    font-size: 0.8rem;
+    color: var(--color-orange-vibrant);
+}
+
+/* --- Botão CTA --- */
+.cta-button {
+    background-color: var(--color-orange-vibrant);
+    border: 2px solid var(--color-orange-vibrant);
+    color: var(--color-white);
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    display: inline-block;
+    cursor: pointer;
+    width: 100%;
+    max-width: 300px;
+    margin-top: 1rem; /* Espaçamento para os botões */
+}
+
+.cta-button:hover {
+    transform: translateY(-5px);
+    background-color: #ffb14b;
+}
+
+.auth-footer {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.auth-footer a {
+    color: var(--color-orange-vibrant);
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* --- Overlay Container --- */
+.overlay-container {
+    position: absolute;
+    top: 0;
+    left: 50%; /* Metade direita */
+    width: 50%;
+    height: 100%;
+    overflow: hidden;
+    transition: transform 0.6s ease-in-out;
+    z-index: 100;
+}
+
+.overlay {
+    background: var(--color-orange-vibrant); /* Fundo da sobreposição */
+    background: -webkit-linear-gradient(to right, var(--color-orange-vibrant), var(--color-orange-vibrant));
+    background: linear-gradient(to right, var(--color-orange-vibrant), var(--color-orange-vibrant));
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: 0 0;
+    color: var(--color-white);
+    position: relative;
+    left: -100%; /* Inicialmente escondido */
+    height: 100%;
+    width: 200%; /* Ocupa 200% para ter dois painéis */
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+}
+
+.overlay-panel {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 0 2rem;
+    text-align: center;
+    top: 0;
+    height: 100%;
+    width: 50%;
+    transform: translateX(0);
+    transition: transform 0.6s ease-in-out;
+}
+
+.overlay-left {
+    transform: translateX(-20%); /* Inicia um pouco para fora para a animação */
+}
+
+.overlay-right {
+    right: 0;
+    transform: translateX(0);
+}
+
+.overlay-panel h1 {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 1rem;
+}
+
+.overlay-panel p {
+    font-size: 1rem;
+    line-height: 1.5rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 2rem;
+}
+
+/* Botão "fantasma" para a sobreposição */
+.ghost {
+    background-color: transparent;
+    border: 2px solid var(--color-white);
+    color: var(--color-white);
+}
+
+.ghost:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: var(--color-white);
+    transform: translateY(-3px);
+}
+
+/* --- Animações para "ative" a classe no auth-container --- */
+
+/* Quando o auth-container tiver a classe 'right-panel-active' */
+.auth-container.right-panel-active .forms-container {
+    transform: translateX(100%);
+}
+
+.auth-container.right-panel-active .login-form {
+    transform: translateX(-100%);
+    opacity: 0;
+    z-index: 1;
+}
+
+.auth-container.right-panel-active .register-form {
+    transform: translateX(0);
+    opacity: 1;
+    z-index: 5;
+}
+
+.auth-container.right-panel-active .overlay-container {
+    transform: translateX(-100%);
+}
+
+.auth-container.right-panel-active .overlay {
+    transform: translateX(50%);
+}
+
+.auth-container.right-panel-active .overlay-left {
+    transform: translateX(0);
+}
+
+.auth-container.right-panel-active .overlay-right {
+    transform: translateX(20%);
+}
+
+/* --- Animação Suave de Texto --- */
+
+/* 1. Define uma transição base para os elementos de texto */
+.forms-container h2,
+.forms-container p,
+.overlay-panel h1,
+.overlay-panel p {
+    /* A transição terá 0.3s de duração e começará 0.3s após o início da animação principal */
+    transition: opacity 0.3s ease-in-out 0.3s, transform 0.3s ease-in-out 0.3s;
+}
+
+/* 2. Define o estado inicial dos textos que estão "escondidos" */
+.register-form h2,
+.register-form p,
+.overlay-left h1,
+.overlay-left p {
+    opacity: 0;
+    transform: translateY(20px); /* Começa um pouco abaixo */
+}
+
+/* 3. Define como os textos que estão sumindo devem se comportar */
+.auth-container.right-panel-active .login-form h2,
+.auth-container.right-panel-active .login-form p,
+.auth-container.right-panel-active .overlay-right h1,
+.auth-container.right-panel-active .overlay-right p {
+    opacity: 0;
+    transform: translateY(-20px); /* Sobe um pouco ao desaparecer */
+}
+
+/* 4. Define como os textos que estão aparecendo devem se comportar */
+.auth-container.right-panel-active .register-form h2,
+.auth-container.right-panel-active .register-form p,
+.auth-container.right-panel-active .overlay-left h1,
+.auth-container.right-panel-active .overlay-left p {
+    opacity: 1;
+    transform: translateY(0); /* Volta para a posição original */
+}
+
+/* --- Responsividade --- */
+
+/* Para tablets e telas menores (até 768px) */
+@media (max-width: 768px) {
+    .auth-container {
+        max-width: 95%;
+        min-height: 90vh; /* Ocupa quase a altura toda da tela */
+        flex-direction: column; /* Empilha os containers */
+        overflow-y: auto; /* Permite rolagem se o conteúdo for grande */
+    }
+
+    .forms-container {
+        width: 100%;
+        height: 60%; /* Ocupa a maior parte do espaço */
+        position: relative;
+        left: 0;
+        transform: none !important; /* Reseta transformações do desktop */
+    }
+    
+    .login-form, .register-form {
+        height: 100%;
+        position: absolute;
+        width: 100%;
+        transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+    }
+    
+    .login-form {
+        transform: translateX(0);
+    }
+    
+    .register-form {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    
+    /* Quando o cadastro está ativo */
+    .auth-container.right-panel-active .login-form {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    
+    .auth-container.right-panel-active .register-form {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    .overlay-container {
+        width: 100%;
+        height: 40%; /* Ocupa a parte inferior */
+        position: relative;
+        left: 0;
+        top: 0;
+        transform: none !important; /* Reseta transformações do desktop */
+    }
+
+    .overlay {
+        width: 100%;
+        height: 100%;
+        left: 0;
+        transform: none !important; /* Reseta transformações do desktop */
+    }
+
+    .overlay-panel {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        transform: none !important;
+        transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+    }
+
+    .overlay-left {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    .overlay-right {
+        transform: translateY(0);
+    }
+
+    /* Quando o cadastro está ativo */
+    .auth-container.right-panel-active .overlay-left {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    .auth-container.right-panel-active .overlay-right {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    .forms-container h2 {
+        font-size: 2rem;
+    }
+
+    .overlay-panel h1 {
+        font-size: 1.8rem;
+    }
+
+    .overlay-panel p, .forms-container p {
+        font-size: 0.9rem;
+    }
+}
+
+
+/* Para celulares (até 480px) */
+@media (max-width: 480px) {
+    .forms-container {
+        padding: 0 1rem; /* Menos preenchimento lateral */
+    }
+
+    .forms-container h2 {
+        font-size: 1.8rem;
+    }
+
+    .input-group {
+        max-width: none; /* Ocupa a largura total */
+    }
+
+    .cta-button {
+        padding: 0.8rem 2rem;
+        font-size: 1rem;
+    }
+
+    .overlay-panel h1 {
+        font-size: 1.5rem;
+    }
+
+    .overlay-panel p {
+        margin-bottom: 1.5rem;
+    }
+}
