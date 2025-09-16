@@ -3,7 +3,7 @@
     --color-blue-dark: #0A2463;
     --color-orange-vibrant: #FF9F1C;
     --color-white: #FFFFFF;
-    --color-light-gray: #f0f0f0; /* Novo para o fundo da sobreposição */
+    --color-light-gray: #f0f0f0;
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Lato', sans-serif;
 }
@@ -39,16 +39,16 @@ body {
     align-items: center;
     height: 100vh;
     position: relative;
-    width: 90%; /* Usar porcentagem para melhor responsividade inicial */
-    max-width: 900px; /* Um pouco menor para telas de desktop */
-    max-height: 600px; /* << ALTERADO: Altura máxima para a caixa */
+    width: 90%; 
+    max-width: 900px; 
+    max-height: 700px; 
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(2px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    overflow: hidden; /* Importante para as transições */
+    overflow: hidden;
 }
 
 /* --- Contêiner dos Formulários (Login e Cadastro) --- */
@@ -58,7 +58,7 @@ body {
     height: 100%;
     transition: all 0.6s ease-in-out;
     left: 0;
-    width: 50%; /* Metade da largura do contêiner principal */
+    width: 50%;
 }
 
 .login-form, .register-form {
@@ -72,16 +72,16 @@ body {
     align-items: center;
     padding: 0 2rem;
     text-align: center;
-    background: transparent; /* Os formulários não terão fundo, o fundo será o do .auth-container */
+    background: transparent;
 }
 
 /* Inicialmente o formulário de cadastro estará escondido */
 .register-form {
     opacity: 0;
-    z-index: 1; /* Para que ele possa estar por baixo inicialmente */
+    z-index: 1; 
 }
 .login-form {
-    z-index: 2; /* Para que ele esteja por cima inicialmente */
+    z-index: 2;
 }
 
 .forms-container h2 {
@@ -102,7 +102,7 @@ body {
     position: relative;
     margin-bottom: 2rem;
     width: 100%;
-    max-width: 300px; /* Limite a largura dos inputs */
+    max-width: 300px;
 }
 
 .input-group input {
@@ -148,7 +148,7 @@ body {
     cursor: pointer;
     width: 100%;
     max-width: 300px;
-    margin-top: 1rem; /* Espaçamento para os botões */
+    margin-top: 1rem;
 }
 
 .cta-button:hover {
@@ -175,7 +175,7 @@ body {
 .overlay-container {
     position: absolute;
     top: 0;
-    left: 50%; /* Metade direita */
+    left: 50%;
     width: 50%;
     height: 100%;
     overflow: hidden;
@@ -184,7 +184,7 @@ body {
 }
 
 .overlay {
-    background: var(--color-orange-vibrant); /* Fundo da sobreposição */
+    background: var(--color-orange-vibrant); 
     background: -webkit-linear-gradient(to right, var(--color-orange-vibrant), var(--color-orange-vibrant));
     background: linear-gradient(to right, var(--color-orange-vibrant), var(--color-orange-vibrant));
     background-repeat: no-repeat;
@@ -192,9 +192,9 @@ body {
     background-position: 0 0;
     color: var(--color-white);
     position: relative;
-    left: -100%; /* Inicialmente escondido */
+    left: -100%; 
     height: 100%;
-    width: 200%; /* Ocupa 200% para ter dois painéis */
+    width: 200%;
     transform: translateX(0);
     transition: transform 0.6s ease-in-out;
 }
@@ -215,7 +215,7 @@ body {
 }
 
 .overlay-left {
-    transform: translateX(-20%); /* Inicia um pouco para fora para a animação */
+    transform: translateX(-20%);
 }
 
 .overlay-right {
@@ -252,7 +252,6 @@ body {
 
 /* --- Animações para "ative" a classe no auth-container --- */
 
-/* Quando o auth-container tiver a classe 'right-panel-active' */
 .auth-container.right-panel-active .forms-container {
     transform: translateX(100%);
 }
@@ -287,59 +286,53 @@ body {
 
 /* --- Animação Suave de Texto --- */
 
-/* 1. Define uma transição base para os elementos de texto */
 .forms-container h2,
 .forms-container p,
 .overlay-panel h1,
 .overlay-panel p {
-    /* A transição terá 0.3s de duração e começará 0.3s após o início da animação principal */
     transition: opacity 0.3s ease-in-out 0.3s, transform 0.3s ease-in-out 0.3s;
 }
 
-/* 2. Define o estado inicial dos textos que estão "escondidos" */
 .register-form h2,
 .register-form p,
 .overlay-left h1,
 .overlay-left p {
     opacity: 0;
-    transform: translateY(20px); /* Começa um pouco abaixo */
+    transform: translateY(20px); 
 }
 
-/* 3. Define como os textos que estão sumindo devem se comportar */
 .auth-container.right-panel-active .login-form h2,
 .auth-container.right-panel-active .login-form p,
 .auth-container.right-panel-active .overlay-right h1,
 .auth-container.right-panel-active .overlay-right p {
     opacity: 0;
-    transform: translateY(-20px); /* Sobe um pouco ao desaparecer */
+    transform: translateY(-20px); 
 }
 
-/* 4. Define como os textos que estão aparecendo devem se comportar */
 .auth-container.right-panel-active .register-form h2,
 .auth-container.right-panel-active .register-form p,
 .auth-container.right-panel-active .overlay-left h1,
 .auth-container.right-panel-active .overlay-left p {
     opacity: 1;
-    transform: translateY(0); /* Volta para a posição original */
+    transform: translateY(0); 
 }
 
 /* --- Responsividade --- */
 
-/* Para tablets e telas menores (até 768px) */
 @media (max-width: 768px) {
     .auth-container {
         max-width: 95%;
-        min-height: 90vh; /* Ocupa quase a altura toda da tela */
-        flex-direction: column; /* Empilha os containers */
-        overflow-y: auto; /* Permite rolagem se o conteúdo for grande */
+        min-height: 90vh;
+        flex-direction: column; 
+        overflow-y: auto; 
     }
 
     .forms-container {
         width: 100%;
-        height: 60%; /* Ocupa a maior parte do espaço */
+        height: 60%; 
         position: relative;
         left: 0;
-        transform: none !important; /* Reseta transformações do desktop */
+        transform: none !important;
     }
     
     .login-form, .register-form {
@@ -358,7 +351,6 @@ body {
         opacity: 0;
     }
     
-    /* Quando o cadastro está ativo */
     .auth-container.right-panel-active .login-form {
         transform: translateX(-100%);
         opacity: 0;
@@ -371,18 +363,18 @@ body {
 
     .overlay-container {
         width: 100%;
-        height: 40%; /* Ocupa a parte inferior */
+        height: 40%;
         position: relative;
         left: 0;
         top: 0;
-        transform: none !important; /* Reseta transformações do desktop */
+        transform: none !important;
     }
 
     .overlay {
         width: 100%;
         height: 100%;
         left: 0;
-        transform: none !important; /* Reseta transformações do desktop */
+        transform: none !important;
     }
 
     .overlay-panel {
@@ -402,7 +394,6 @@ body {
         transform: translateY(0);
     }
 
-    /* Quando o cadastro está ativo */
     .auth-container.right-panel-active .overlay-left {
         transform: translateY(0);
         opacity: 1;
@@ -427,10 +418,9 @@ body {
 }
 
 
-/* Para celulares (até 480px) */
 @media (max-width: 480px) {
     .forms-container {
-        padding: 0 1rem; /* Menos preenchimento lateral */
+        padding: 0 1rem;
     }
 
     .forms-container h2 {
@@ -438,7 +428,7 @@ body {
     }
 
     .input-group {
-        max-width: none; /* Ocupa a largura total */
+        max-width: none;
     }
 
     .cta-button {

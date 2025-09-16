@@ -16,13 +16,13 @@
             <div class="login-form">
                 <h2>Bem-vindo de volta!</h2>
                 <p>Entre para dominar o jogo.</p>
-                <form>
+                <form action="/login" method="POST">
                     <div class="input-group">
-                        <input type="email" id="loginEmail" required>
+                        <input type="email" id="loginEmail" name="email" required>
                         <label for="loginEmail">Email</label>
                     </div>
                     <div class="input-group">
-                        <input type="password" id="loginPassword" required>
+                        <input type="password" id="loginPassword" name="senha" required>
                         <label for="loginPassword">Senha</label>
                     </div>
                     <button type="submit" class="cta-button">Entrar</button>
@@ -35,21 +35,29 @@
             <div class="register-form">
                 <h2>Crie sua conta!</h2>
                 <p>Junte-se a nós e comece a jogar.</p>
-                <form>
+                <form action="/register" method="POST">
                     <div class="input-group">
-                        <input type="text" id="registerUsername" required>
-                        <label for="registerUsername">Usuário</label>
+                        <input type="text" id="registerName" name="nome" required>
+                        <label for="registerName">Nome Completo</label>
                     </div>
                     <div class="input-group">
-                        <input type="email" id="registerEmail" required>
+                        <input type="email" id="registerEmail" name="email" required>
                         <label for="registerEmail">Email</label>
                     </div>
+                     <div class="input-group">
+                        <input type="tel" id="registerTelefone" name="telefone" required>
+                        <label for="registerTelefone">Telefone</label>
+                    </div>
+                     <div class="input-group">
+                        <input type="text" id="registerEndereco" name="endereco" required>
+                        <label for="registerEndereco">Endereço</label>
+                    </div>
                     <div class="input-group">
-                        <input type="password" id="registerPassword" required>
+                        <input type="password" id="registerPassword" name="senha" required minlength="8">
                         <label for="registerPassword">Senha</label>
                     </div>
                     <div class="input-group">
-                        <input type="password" id="confirmPassword" required>
+                        <input type="password" id="confirmPassword" name="confirmSenha" required>
                         <label for="confirmPassword">Confirmar Senha</label>
                     </div>
                     <button type="submit" class="cta-button">Cadastrar</button>

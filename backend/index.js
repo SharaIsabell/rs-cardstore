@@ -2,9 +2,19 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/pooldb');
 
+const bcrypt = require('bcryptjs'); // Importa a biblioteca para hashing de senha
+const bodyParser = require('body-parser');
+
+// Configura o body-parser para ler dados de formulários
+router.use(bodyParser.urlencoded({ extended: true }));
+
+router.get('/', (req, res) => {
+  res.render('index', { titulo: 'Página Inicial' });
+});
+
 router.get('/', async (req, res) => {
   try {
-    // 1. Busca os 2 produtos mais recentes marcados como "novo"
+    // Busca os 2 produtos mais recentes marcados como "novo"
     const [novosProdutos] = await db.query(
       `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
          FROM produtos
@@ -16,7 +26,7 @@ router.get('/', async (req, res) => {
     // Pega os IDs dos produtos novos para não repeti-los na busca de promoções
     const idsIgnorados = novosProdutos.length > 0 ? novosProdutos.map(p => p.id) : [0];
 
-    // 2. Busca os 2 produtos com o maior percentual de desconto (que não sejam os novos já selecionados)
+    // Busca os 2 produtos com o maior percentual de desconto (que não sejam os novos já selecionados)
     const [produtosEmPromocao] = await db.query(
       `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
          FROM produtos
@@ -26,10 +36,10 @@ router.get('/', async (req, res) => {
       [idsIgnorados]
     );
 
-    // 3. Junta os resultados das duas buscas em um único array
+    // Junta os resultados das duas buscas em um único array
     const destaques = [...novosProdutos, ...produtosEmPromocao];
 
-    // 4. Renderiza a página principal, enviando a lista de destaques
+    // Renderiza a página principal, enviando a lista de destaques
     res.render('index', { destaques: destaques });
 
   } catch (err) {
@@ -148,6 +158,66 @@ router.get('/promocoes', async (req, res) => {
 
 router.get('/login', (req, res) => {
     res.render('login');
+});
+
+// Rota POST para registrar um novo usuário
+router.post('/register', async (req, res) => {
+  const { nome, email, telefone, endereco, senha, confirmSenha } = req.body;
+
+  if (senha !== confirmSenha) {
+    return res.status(400).send('As senhas não coincidem.');
+  }
+
+  if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
+      return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
+  }
+
+  try {
+    const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    if (existingUser.length > 0) {
+        return res.status(409).send('Este e-mail já está cadastrado.');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const senha_hash = await bcrypt.hash(senha, salt);
+
+    await db.query(
+      'INSERT INTO users (nome, email, telefone, endereco, senha_hash) VALUES (?, ?, ?, ?, ?)',
+      [nome, email, telefone, endereco, senha_hash]
+    );
+
+    res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
+
+  } catch (error) {
+    console.error('ERRO DETALHADO AO CADASTRAR:', error); 
+    res.status(500).send('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
+  }
+});
+
+router.post('/login', async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+
+    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+
+    if (users.length === 0) {
+      return res.status(401).send('E-mail ou senha inválidos.');
+    }
+
+    const user = users[0];
+
+    const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
+
+    if (!senhaCorreta) {
+      return res.status(401).send('E-mail ou senha inválidos.');
+    }
+    
+    res.status(200).send(`Login bem-sucedido! Bem-vindo, ${user.nome}.`);
+
+  } catch (error) {
+    console.error('ERRO DETALHADO AO FAZER LOGIN:', error);
+    res.status(500).send('Ocorreu um erro no servidor ao tentar fazer login.');
+  }
 });
 
 module.exports = router;
