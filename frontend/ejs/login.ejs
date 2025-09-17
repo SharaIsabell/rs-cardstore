@@ -16,6 +16,11 @@
             <div class="login-form">
                 <h2>Bem-vindo de volta!</h2>
                 <p>Entre para dominar o jogo.</p>
+                <% if (typeof message !=='undefined' && message) { %>
+                    <div class="success-message">
+                        <%= message %>
+                    </div>
+                <% } %>
                 <form action="/login" method="POST">
                     <div class="input-group">
                         <input type="email" id="loginEmail" name="email" required>

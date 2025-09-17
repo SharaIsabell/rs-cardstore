@@ -317,6 +317,17 @@ body {
     transform: translateY(0); 
 }
 
+.success-message {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: #d4edda; /* Verde claro */
+    color: #155724; /* Verde escuro */
+    border: 1px solid #c3e6cb;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
 /* --- Responsividade --- */
 
 @media (max-width: 768px) {
