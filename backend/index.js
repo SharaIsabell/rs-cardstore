@@ -317,4 +317,129 @@ const checarVerificado = async (req, res, next) => {
   }
 };
 
+router.get('/carrinho', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+
+    try {
+        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [req.session.userId]);
+
+        if (cart.length === 0) {
+            return res.render('carrinho', { cart: null });
+        }
+
+        const carrinho_id = cart[0].id;
+
+        const [items] = await db.query(
+            `SELECT 
+                ci.produto_id, 
+                ci.quantidade, 
+                p.nome, 
+                p.preco, 
+                p.imagem_url 
+             FROM carrinho_itens ci 
+             JOIN produtos p ON ci.produto_id = p.id 
+             WHERE ci.carrinho_id = ?`,
+            [carrinho_id]
+        );
+
+        const total = items.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+
+        res.render('carrinho', { cart: { items, total } });
+
+    } catch (error) {
+        console.error('Erro ao buscar carrinho:', error);
+        res.status(500).send('Erro ao carregar o carrinho.');
+    }
+});
+
+router.post('/carrinho/adicionar/:id', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+
+    const produto_id = req.params.id;
+    const quantidade = parseInt(req.body.quantidade) || 1;
+    const user_id = req.session.userId;
+
+    try {
+        let [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+        let carrinho_id;
+
+        if (cart.length === 0) {
+            const [newCart] = await db.query('INSERT INTO carrinhos (user_id) VALUES (?)', [user_id]);
+            carrinho_id = newCart.insertId;
+        } else {
+            carrinho_id = cart[0].id;
+        }
+
+        const [existingItem] = await db.query('SELECT * FROM carrinho_itens WHERE carrinho_id = ? AND produto_id = ?', [carrinho_id, produto_id]);
+
+        if (existingItem.length > 0) {
+            await db.query('UPDATE carrinho_itens SET quantidade = quantidade + ? WHERE id = ?', [quantidade, existingItem[0].id]);
+        } else {
+            await db.query('INSERT INTO carrinho_itens (carrinho_id, produto_id, quantidade) VALUES (?, ?, ?)', [carrinho_id, produto_id, quantidade]);
+        }
+
+        res.redirect('/carrinho');
+
+    } catch (error) {
+        console.error('Erro ao adicionar ao carrinho:', error);
+        res.status(500).send('Erro ao adicionar o produto ao carrinho.');
+    }
+});
+
+router.post('/carrinho/remover/:id', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+
+    const produto_id = req.params.id;
+    const user_id = req.session.userId;
+
+    try {
+        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+
+        if (cart.length > 0) {
+            const carrinho_id = cart[0].id;
+            await db.query('DELETE FROM carrinho_itens WHERE carrinho_id = ? AND produto_id = ?', [carrinho_id, produto_id]);
+        }
+
+        res.redirect('/carrinho');
+    } catch (error) {
+        console.error('Erro ao remover do carrinho:', error);
+        res.status(500).send('Erro ao remover o produto do carrinho.');
+    }
+});
+
+router.post('/carrinho/atualizar/:id', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+
+    const produto_id = req.params.id;
+    const quantidade = parseInt(req.body.quantidade);
+    const user_id = req.session.userId;
+
+    if (quantidade < 1) {
+        return res.redirect('/carrinho');
+    }
+
+    try {
+        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+
+        if (cart.length > 0) {
+            const carrinho_id = cart[0].id;
+            await db.query('UPDATE carrinho_itens SET quantidade = ? WHERE carrinho_id = ? AND produto_id = ?', [quantidade, carrinho_id, produto_id]);
+        }
+
+        res.redirect('/carrinho');
+    } catch (error) {
+        console.error('Erro ao atualizar o carrinho:', error);
+        res.status(500).send('Erro ao atualizar a quantidade do produto.');
+    }
+});
+
+
 module.exports = router;
