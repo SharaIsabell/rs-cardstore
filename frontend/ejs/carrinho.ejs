@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrinho de Compras - RS Card Store</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/carrinho.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container section">
+        <h1 class="section-title">Meu Carrinho</h1>
+
+        <% if (cart && cart.items && cart.items.length > 0) { %>
+            <div class="cart-container">
+                <div class="cart-items">
+                    <% cart.items.forEach(item => { %>
+                        <div class="cart-item" data-item-id="<%= item.produto_id %>">
+                            <div class="item-image">
+                                <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
+                            </div>
+                            <div class="item-details">
+                                <h3 class="item-name"><%= item.nome %></h3>
+                                <p class="item-price">R$ <%= Number(item.preco).toFixed(2) %></p>
+                            </div>
+                            <div class="item-quantity">
+                                <form action="/carrinho/atualizar/<%= item.produto_id %>" method="POST">
+                                    <input type="number" name="quantidade" class="quantity-input" value="<%= item.quantidade %>" min="1" data-price="<%= item.preco %>">
+                                </form>
+                            </div>
+                            <div class="item-subtotal">
+                                <strong>R$ <span class="subtotal-value"><%= (Number(item.preco) * item.quantidade).toFixed(2) %></span></strong>
+                            </div>
+                            <div class="item-remove">
+                                <form action="/carrinho/remover/<%= item.produto_id %>" method="POST">
+                                    <button type="submit" class="remove-btn"><i class="fa-solid fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+
+                <div class="cart-summary">
+                    <h2>Resumo do Pedido</h2>
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <strong id="summary-subtotal">R$ <%= cart.total.toFixed(2) %></strong>
+                    </div>
+                    <div class="summary-row">
+                        <span>Frete</span>
+                        <span>Grátis</span>
+                    </div>
+                    <div class="summary-total">
+                        <span>Total</span>
+                        <strong id="summary-total">R$ <%= cart.total.toFixed(2) %></strong>
+                    </div>
+                    <button class="cta-button checkout-btn">Finalizar Compra</button>
+                </div>
+            </div>
+        <% } else { %>
+            <div class="empty-cart">
+                <h2>Seu carrinho está vazio.</h2>
+                <p>Adicione produtos para vê-los aqui.</p>
+                <a href="/" class="cta-button">Voltar para a loja</a>
+            </div>
+        <% } %>
+    </main>
+
+    <%- include('partials/footer') %>
+
+    <script src="/js/carrinho.js"></script>
+</body>
+</html>
