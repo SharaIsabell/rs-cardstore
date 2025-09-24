@@ -8,9 +8,11 @@ const bodyParser = require('body-parser');
 const crypto = require('crypto');
 const { enviarEmailVerificacao } = require('../frontend/js/enviarEmail');
 const session = require('express-session'); // Importe o express-session !!!
+const axios = require('axios');
 
 // Configura o body-parser para ler dados de formulários
 router.use(bodyParser.urlencoded({ extended: true }));
+router.use(express.json());
 
 router.use(session({
   secret: 'seu-segredo-super-secreto-aqui',
@@ -441,5 +443,76 @@ router.post('/carrinho/atualizar/:id', async (req, res) => {
     }
 });
 
+// ROTA REVISADA: POST para calcular o frete
+router.post('/carrinho/calcular-frete', async (req, res) => {
+    const { cep } = req.body;
+    const user_id = req.session.userId;
+
+    if (!user_id) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+    if (!cep || cep.replace(/\D/g, '').length !== 8) {
+        return res.status(400).json({ error: 'CEP inválido.' });
+    }
+
+    try {
+        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+        if (cart.length === 0) {
+            return res.status(404).json({ error: 'Carrinho vazio.' });
+        }
+        const carrinho_id = cart[0].id;
+
+        const [items] = await db.query(
+            `SELECT 
+                p.id, p.preco, p.peso, p.largura,
+                p.altura, p.comprimento, ci.quantidade
+             FROM carrinho_itens ci
+             JOIN produtos p ON ci.produto_id = p.id
+             WHERE ci.carrinho_id = ?`,
+            [carrinho_id]
+        );
+
+        if (items.length === 0) {
+            return res.status(404).json({ error: 'Nenhum item encontrado no carrinho.' });
+        }
+
+        const payload = {
+            from: {
+                postal_code: process.env.ME_FROM_POSTAL_CODE,
+            },
+            to: {
+                postal_code: cep,
+            },
+            products: items.map(item => ({
+                id: item.id.toString(),
+                width: item.largura,
+                height: item.altura,
+                length: item.comprimento,
+                weight: item.peso,
+                insurance_value: parseFloat(item.preco),
+                quantity: item.quantidade
+            }))
+        };
+        
+        const response = await axios.post(
+            'https://www.melhorenvio.com.br/api/v2/me/shipment/calculate',
+            payload,
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${process.env.ME_API_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'User-Agent': `Aplicação ${process.env.ME_EMAIL_TECNICO}`
+                }
+            }
+        );
+
+        res.json(response.data);
+
+    } catch (error) {
+      console.error('ERRO DETALHADO AO CALCULAR FRETE:', error.response ? error.response.data : error.message);
+        res.status(500).json({ error: 'Não foi possível calcular o frete. Verifique o CEP e tente novamente.' });
+    }
+});
 
 module.exports = router;

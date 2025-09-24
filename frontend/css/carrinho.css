@@ -116,6 +116,89 @@
     margin-bottom: 1rem;
 }
 
+.shipping-calculator {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ccc;
+}
+
+.shipping-calculator h3 {
+    font-size: 1.2rem;
+    color: var(--color-blue-dark);
+    margin-bottom: 15px;
+}
+
+.shipping-input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.shipping-input-group input {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.cta-button-small {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    background-color: var(--color-blue-dark);
+    color: var(--color-white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.cta-button-small:hover {
+    background-color: var(--color-blue-light);
+}
+
+.cta-button-small:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+#shipping-options-container ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#shipping-options-container li {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+#shipping-options-container li:last-child {
+    border-bottom: none;
+}
+
+#shipping-options-container input[type="radio"] {
+    margin-right: 10px;
+}
+
+#shipping-options-container label {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+#shipping-options-container label em {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.error-message {
+    color: #e74c3c;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
 @media (max-width: 992px) {
     .cart-container {
         grid-template-columns: 1fr;
