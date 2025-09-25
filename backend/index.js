@@ -18,7 +18,7 @@ router.use(session({
   secret: 'seu-segredo-super-secreto-aqui',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false } 
+  cookie: { secure: false }
 }));
 
 router.use((req, res, next) => {
@@ -162,10 +162,10 @@ router.get('/acessorios', async (req, res) => {
          FROM produtos 
         WHERE categoria = ? 
      ORDER BY id DESC`,
-      ['Acessorios'] 
+      ['Acessorios']
     );
 
-    res.render('acessorios', { produtos: rows }); 
+    res.render('acessorios', { produtos: rows });
   } catch (err) {
     console.error('Erro ao carregar produtos de Acessórios:', err);
     res.status(500).send('Erro ao carregar a página de acessórios.');
@@ -191,11 +191,11 @@ router.get('/promocoes', async (req, res) => {
 
 // Rota GET para a página de login
 router.get('/login', (req, res) => {
-    let message = '';
-    if (req.query.status === 'verificado') {
-        message = 'E-mail verificado com sucesso! Você já pode fazer o login.';
-    }
-    res.render('login', { message }); 
+  let message = '';
+  if (req.query.status === 'verificado') {
+    message = 'E-mail verificado com sucesso! Você já pode fazer o login.';
+  }
+  res.render('login', { message });
 });
 
 // Rota POST para registrar um novo usuário
@@ -207,13 +207,13 @@ router.post('/register', async (req, res) => {
   }
 
   if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
-      return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
+    return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
   }
 
   try {
     const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser.length > 0) {
-        return res.status(409).send('Este e-mail já está cadastrado.');
+      return res.status(409).send('Este e-mail já está cadastrado.');
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -232,7 +232,7 @@ router.post('/register', async (req, res) => {
     res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
 
   } catch (error) {
-    console.error('ERRO DETALHADO AO CADASTRAR:', error); 
+    console.error('ERRO DETALHADO AO CADASTRAR:', error);
     res.status(500).send('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
   }
 });
@@ -285,13 +285,13 @@ router.post('/login', async (req, res) => {
     const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
 
     if (!user.email_verificado) {
-        return res.status(403).send('Por favor, verifique seu e-mail antes de fazer o login. Um novo link foi enviado.');
+      return res.status(403).send('Por favor, verifique seu e-mail antes de fazer o login. Um novo link foi enviado.');
     }
 
     if (!senhaCorreta) {
       return res.status(401).send('E-mail ou senha inválidos.');
     }
-    
+
     req.session.userId = user.id;
     req.session.userName = user.nome;
 
@@ -304,12 +304,12 @@ router.post('/login', async (req, res) => {
 });
 
 router.get('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).send('Não foi possível fazer logout.');
-        }
-        res.redirect('/');
-    });
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).send('Não foi possível fazer logout.');
+    }
+    res.redirect('/');
+  });
 });
 
 const checarVerificado = async (req, res, next) => {
@@ -336,6 +336,19 @@ const checarVerificado = async (req, res, next) => {
 // Inicia o checkout a partir do carrinho (trava de fluxo)
 router.post('/checkout/iniciar', requireLogin, async (req, res) => {
   try {
+    const freteBruto = (req.body.frete_valor || '').toString().replace(',', '.');
+    const frete = parseFloat(freteBruto);
+    const freteServico = req.body.frete_servico || null;
+    const fretePrazo = req.body.frete_prazo || null;
+
+    if (Number.isNaN(frete)) {
+      req.session.flash = 'Selecione uma opção de frete para continuar.';
+      return res.redirect('/carrinho');
+    }
+
+    req.session.frete = frete;
+    req.session.freteInfo = { servico: freteServico, prazo: fretePrazo };
+
     const user_id = req.session.userId;
 
     const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
@@ -345,7 +358,7 @@ router.post('/checkout/iniciar', requireLogin, async (req, res) => {
     const [hasItem] = await db.query('SELECT 1 FROM carrinho_itens WHERE carrinho_id = ? LIMIT 1', [carrinho_id]);
     if (hasItem.length === 0) { req.session.flash = 'Seu carrinho está vazio.'; return res.redirect('/carrinho'); }
 
-    req.session.canAccessCheckout = true; 
+    req.session.canAccessCheckout = true;
     return res.redirect('/checkout');
   } catch (e) {
     console.error('Erro ao iniciar checkout:', e);
@@ -357,6 +370,11 @@ router.post('/checkout/iniciar', requireLogin, async (req, res) => {
 router.get('/checkout', requireLogin, async (req, res) => {
   if (!req.session.canAccessCheckout) {
     req.session.flash = 'Acesse o checkout a partir do carrinho.';
+    return res.redirect('/carrinho');
+  }
+
+  if (typeof req.session.frete !== 'number' || Number.isNaN(req.session.frete)) {
+    req.session.flash = 'Selecione uma opção de frete no carrinho.';
     return res.redirect('/carrinho');
   }
 
@@ -382,7 +400,8 @@ router.get('/checkout', requireLogin, async (req, res) => {
     res.render('checkout', {
       cart: { items, subtotal, frete, total },
       pagamento: req.session.pagamento || null,
-      message: msg || null
+      message: msg || null,
+      freteInfo: req.session.freteInfo || null
     });
   } catch (e) {
     console.error('Erro no checkout:', e);
@@ -407,7 +426,7 @@ router.post('/checkout/pagamento', requireLogin, async (req, res) => {
     const pagamento = { metodo, status: 'selecionado', at: new Date().toISOString() };
 
     if (metodo === 'cartao_credito' || metodo === 'cartao_debito') {
-      const num = (cc_number || '').replace(/\D/g,'');
+      const num = (cc_number || '').replace(/\D/g, '');
       const holder = (cc_holder || '').trim();
       const exp = cc_exp || '';
       const cvv = cc_cvv || '';
@@ -436,21 +455,21 @@ router.post('/checkout/pagamento', requireLogin, async (req, res) => {
 
 //Rotas do carrinho
 router.get('/carrinho', async (req, res) => {
-    if (!req.session.userId) {
-        return res.redirect('/login');
+  if (!req.session.userId) {
+    return res.redirect('/login');
+  }
+
+  try {
+    const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [req.session.userId]);
+
+    if (cart.length === 0) {
+      return res.render('carrinho', { cart: null });
     }
 
-    try {
-        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [req.session.userId]);
+    const carrinho_id = cart[0].id;
 
-        if (cart.length === 0) {
-            return res.render('carrinho', { cart: null });
-        }
-
-        const carrinho_id = cart[0].id;
-
-        const [items] = await db.query(
-            `SELECT 
+    const [items] = await db.query(
+      `SELECT 
                 ci.produto_id, 
                 ci.quantidade, 
                 p.nome, 
@@ -459,176 +478,176 @@ router.get('/carrinho', async (req, res) => {
              FROM carrinho_itens ci 
              JOIN produtos p ON ci.produto_id = p.id 
              WHERE ci.carrinho_id = ?`,
-            [carrinho_id]
-        );
+      [carrinho_id]
+    );
 
-        const total = items.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+    const total = items.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
 
-        res.render('carrinho', { cart: { items, total } });
+    res.render('carrinho', { cart: { items, total } });
 
-    } catch (error) {
-        console.error('Erro ao buscar carrinho:', error);
-        res.status(500).send('Erro ao carregar o carrinho.');
-    }
+  } catch (error) {
+    console.error('Erro ao buscar carrinho:', error);
+    res.status(500).send('Erro ao carregar o carrinho.');
+  }
 });
 
 router.post('/carrinho/adicionar/:id', async (req, res) => {
-    if (!req.session.userId) {
-        return res.redirect('/login');
+  if (!req.session.userId) {
+    return res.redirect('/login');
+  }
+
+  const produto_id = req.params.id;
+  const quantidade = parseInt(req.body.quantidade) || 1;
+  const user_id = req.session.userId;
+
+  try {
+    let [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+    let carrinho_id;
+
+    if (cart.length === 0) {
+      const [newCart] = await db.query('INSERT INTO carrinhos (user_id) VALUES (?)', [user_id]);
+      carrinho_id = newCart.insertId;
+    } else {
+      carrinho_id = cart[0].id;
     }
 
-    const produto_id = req.params.id;
-    const quantidade = parseInt(req.body.quantidade) || 1;
-    const user_id = req.session.userId;
+    const [existingItem] = await db.query('SELECT * FROM carrinho_itens WHERE carrinho_id = ? AND produto_id = ?', [carrinho_id, produto_id]);
 
-    try {
-        let [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
-        let carrinho_id;
-
-        if (cart.length === 0) {
-            const [newCart] = await db.query('INSERT INTO carrinhos (user_id) VALUES (?)', [user_id]);
-            carrinho_id = newCart.insertId;
-        } else {
-            carrinho_id = cart[0].id;
-        }
-
-        const [existingItem] = await db.query('SELECT * FROM carrinho_itens WHERE carrinho_id = ? AND produto_id = ?', [carrinho_id, produto_id]);
-
-        if (existingItem.length > 0) {
-            await db.query('UPDATE carrinho_itens SET quantidade = quantidade + ? WHERE id = ?', [quantidade, existingItem[0].id]);
-        } else {
-            await db.query('INSERT INTO carrinho_itens (carrinho_id, produto_id, quantidade) VALUES (?, ?, ?)', [carrinho_id, produto_id, quantidade]);
-        }
-
-        res.redirect('/carrinho');
-
-    } catch (error) {
-        console.error('Erro ao adicionar ao carrinho:', error);
-        res.status(500).send('Erro ao adicionar o produto ao carrinho.');
+    if (existingItem.length > 0) {
+      await db.query('UPDATE carrinho_itens SET quantidade = quantidade + ? WHERE id = ?', [quantidade, existingItem[0].id]);
+    } else {
+      await db.query('INSERT INTO carrinho_itens (carrinho_id, produto_id, quantidade) VALUES (?, ?, ?)', [carrinho_id, produto_id, quantidade]);
     }
+
+    res.redirect('/carrinho');
+
+  } catch (error) {
+    console.error('Erro ao adicionar ao carrinho:', error);
+    res.status(500).send('Erro ao adicionar o produto ao carrinho.');
+  }
 });
 
 router.post('/carrinho/remover/:id', async (req, res) => {
-    if (!req.session.userId) {
-        return res.redirect('/login');
+  if (!req.session.userId) {
+    return res.redirect('/login');
+  }
+
+  const produto_id = req.params.id;
+  const user_id = req.session.userId;
+
+  try {
+    const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+
+    if (cart.length > 0) {
+      const carrinho_id = cart[0].id;
+      await db.query('DELETE FROM carrinho_itens WHERE carrinho_id = ? AND produto_id = ?', [carrinho_id, produto_id]);
     }
 
-    const produto_id = req.params.id;
-    const user_id = req.session.userId;
-
-    try {
-        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
-
-        if (cart.length > 0) {
-            const carrinho_id = cart[0].id;
-            await db.query('DELETE FROM carrinho_itens WHERE carrinho_id = ? AND produto_id = ?', [carrinho_id, produto_id]);
-        }
-
-        res.redirect('/carrinho');
-    } catch (error) {
-        console.error('Erro ao remover do carrinho:', error);
-        res.status(500).send('Erro ao remover o produto do carrinho.');
-    }
+    res.redirect('/carrinho');
+  } catch (error) {
+    console.error('Erro ao remover do carrinho:', error);
+    res.status(500).send('Erro ao remover o produto do carrinho.');
+  }
 });
 
 router.post('/carrinho/atualizar/:id', async (req, res) => {
-    if (!req.session.userId) {
-        return res.redirect('/login');
+  if (!req.session.userId) {
+    return res.redirect('/login');
+  }
+
+  const produto_id = req.params.id;
+  const quantidade = parseInt(req.body.quantidade);
+  const user_id = req.session.userId;
+
+  if (quantidade < 1) {
+    return res.redirect('/carrinho');
+  }
+
+  try {
+    const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+
+    if (cart.length > 0) {
+      const carrinho_id = cart[0].id;
+      await db.query('UPDATE carrinho_itens SET quantidade = ? WHERE carrinho_id = ? AND produto_id = ?', [quantidade, carrinho_id, produto_id]);
     }
 
-    const produto_id = req.params.id;
-    const quantidade = parseInt(req.body.quantidade);
-    const user_id = req.session.userId;
-
-    if (quantidade < 1) {
-        return res.redirect('/carrinho');
-    }
-
-    try {
-        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
-
-        if (cart.length > 0) {
-            const carrinho_id = cart[0].id;
-            await db.query('UPDATE carrinho_itens SET quantidade = ? WHERE carrinho_id = ? AND produto_id = ?', [quantidade, carrinho_id, produto_id]);
-        }
-
-        res.redirect('/carrinho');
-    } catch (error) {
-        console.error('Erro ao atualizar o carrinho:', error);
-        res.status(500).send('Erro ao atualizar a quantidade do produto.');
-    }
+    res.redirect('/carrinho');
+  } catch (error) {
+    console.error('Erro ao atualizar o carrinho:', error);
+    res.status(500).send('Erro ao atualizar a quantidade do produto.');
+  }
 });
 
 // ROTA REVISADA: POST para calcular o frete
 router.post('/carrinho/calcular-frete', async (req, res) => {
-    const { cep } = req.body;
-    const user_id = req.session.userId;
+  const { cep } = req.body;
+  const user_id = req.session.userId;
 
-    if (!user_id) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
+  if (!user_id) {
+    return res.status(401).json({ error: 'Usuário não autenticado.' });
+  }
+  if (!cep || cep.replace(/\D/g, '').length !== 8) {
+    return res.status(400).json({ error: 'CEP inválido.' });
+  }
+
+  try {
+    const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+    if (cart.length === 0) {
+      return res.status(404).json({ error: 'Carrinho vazio.' });
     }
-    if (!cep || cep.replace(/\D/g, '').length !== 8) {
-        return res.status(400).json({ error: 'CEP inválido.' });
-    }
+    const carrinho_id = cart[0].id;
 
-    try {
-        const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
-        if (cart.length === 0) {
-            return res.status(404).json({ error: 'Carrinho vazio.' });
-        }
-        const carrinho_id = cart[0].id;
-
-        const [items] = await db.query(
-            `SELECT 
+    const [items] = await db.query(
+      `SELECT 
                 p.id, p.preco, p.peso, p.largura,
                 p.altura, p.comprimento, ci.quantidade
              FROM carrinho_itens ci
              JOIN produtos p ON ci.produto_id = p.id
              WHERE ci.carrinho_id = ?`,
-            [carrinho_id]
-        );
+      [carrinho_id]
+    );
 
-        if (items.length === 0) {
-            return res.status(404).json({ error: 'Nenhum item encontrado no carrinho.' });
-        }
-
-        const payload = {
-            from: {
-                postal_code: process.env.ME_FROM_POSTAL_CODE,
-            },
-            to: {
-                postal_code: cep,
-            },
-            products: items.map(item => ({
-                id: item.id.toString(),
-                width: item.largura,
-                height: item.altura,
-                length: item.comprimento,
-                weight: item.peso,
-                insurance_value: parseFloat(item.preco),
-                quantity: item.quantidade
-            }))
-        };
-        
-        const response = await axios.post(
-            'https://www.melhorenvio.com.br/api/v2/me/shipment/calculate',
-            payload,
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${process.env.ME_API_TOKEN}`,
-                    'Content-Type': 'application/json',
-                    'User-Agent': `Aplicação ${process.env.ME_EMAIL_TECNICO}`
-                }
-            }
-        );
-
-        res.json(response.data);
-
-    } catch (error) {
-      console.error('ERRO DETALHADO AO CALCULAR FRETE:', error.response ? error.response.data : error.message);
-        res.status(500).json({ error: 'Não foi possível calcular o frete. Verifique o CEP e tente novamente.' });
+    if (items.length === 0) {
+      return res.status(404).json({ error: 'Nenhum item encontrado no carrinho.' });
     }
+
+    const payload = {
+      from: {
+        postal_code: process.env.ME_FROM_POSTAL_CODE,
+      },
+      to: {
+        postal_code: cep,
+      },
+      products: items.map(item => ({
+        id: item.id.toString(),
+        width: item.largura,
+        height: item.altura,
+        length: item.comprimento,
+        weight: item.peso,
+        insurance_value: parseFloat(item.preco),
+        quantity: item.quantidade
+      }))
+    };
+
+    const response = await axios.post(
+      'https://www.melhorenvio.com.br/api/v2/me/shipment/calculate',
+      payload,
+      {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${process.env.ME_API_TOKEN}`,
+          'Content-Type': 'application/json',
+          'User-Agent': `Aplicação ${process.env.ME_EMAIL_TECNICO}`
+        }
+      }
+    );
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error('ERRO DETALHADO AO CALCULAR FRETE:', error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Não foi possível calcular o frete. Verifique o CEP e tente novamente.' });
+  }
 });
 
 module.exports = router;
