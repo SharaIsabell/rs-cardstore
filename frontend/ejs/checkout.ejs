@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Checkout - Seleção de Pagamento</title>
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/checkout.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="/js/checkout.js" defer></script>
+</head>
+<body>
+  <%- include('partials/header') %>
+
+  <main class="container section">
+    <h1 class="section-title">Pagamento</h1>
+
+    <% if (message) { %>
+      <div class="alert success"><%= message %></div>
+    <% } %>
+
+    <div class="checkout-grid">
+      <section class="checkout-left">
+        <h2 class="section-subtitle">Seu pedido</h2>
+
+        <% if (cart && cart.items && cart.items.length) { %>
+          <% cart.items.forEach(item => { %>
+            <div class="ck-item">
+              <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
+              <div>
+                <div class="ck-name"><%= item.nome %></div>
+                <div class="ck-price">R$ <%= Number(item.preco).toFixed(2) %> × <%= item.quantidade %></div>
+              </div>
+            </div>
+          <% }) %>
+        <% } else { %>
+          <p>Seu carrinho está vazio.</p>
+        <% } %>
+      </section>
+
+      <aside class="checkout-right">
+        <h2 class="section-subtitle">Resumo</h2>
+        <div class="summary-row"><span>Subtotal</span><strong>R$ <%= cart.subtotal.toFixed(2) %></strong></div>
+        <div class="summary-row"><span>Frete</span><strong>R$ <%= cart.frete.toFixed(2) %></strong></div>
+        <div class="summary-total"><span>Total</span><strong>R$ <%= cart.total.toFixed(2) %></strong></div>
+
+        <form action="/checkout/pagamento" method="POST" class="payment-form">
+          <h3 class="section-subtitle" style="margin-top: 16px;">Selecione o método</h3>
+
+          <label class="radio">
+            <input type="radio" name="metodo" value="cartao_credito" <%= (pagamento && pagamento.metodo==='cartao_credito') ? 'checked' : '' %> >
+            Cartão de Crédito
+          </label>
+          <label class="radio">
+            <input type="radio" name="metodo" value="cartao_debito" <%= (pagamento && pagamento.metodo==='cartao_debito') ? 'checked' : '' %> >
+            Cartão de Débito
+          </label>
+          <label class="radio">
+            <input type="radio" name="metodo" value="pix" <%= (pagamento && pagamento.metodo==='pix') ? 'checked' : '' %> >
+            Pix
+          </label>
+
+          <div id="card-fields" class="card-fields" style="display:none">
+            <div class="form-row">
+              <label>Número do cartão</label>
+              <input id="cc_number" name="cc_number" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="19">
+            </div>
+            <div class="form-row">
+              <label>Nome do titular</label>
+              <input id="cc_holder" name="cc_holder" autocomplete="cc-name" placeholder="Como está no cartão">
+            </div>
+            <div class="grid2">
+              <div class="form-row">
+                <label>Validade (MM/AA)</label>
+                <input id="cc_exp" name="cc_exp" inputmode="numeric" placeholder="MM/AA" maxlength="5">
+              </div>
+              <div class="form-row">
+                <label>CVV</label>
+                <input id="cc_cvv" name="cc_cvv" inputmode="numeric" placeholder="123" maxlength="4">
+              </div>
+            </div>
+            <% if (pagamento && pagamento.card) { %>
+              <p class="muted">Selecionado: <%= pagamento.card.brand %> final <%= pagamento.card.last4 %></p>
+            <% } %>
+          </div>
+
+          <div id="pix-fields" class="pix-fields" style="display:none">
+            <p>Escaneie o QR Code ou copie o código “copia e cola”.</p>
+            <div id="qrcode" class="qrcode"></div>
+            <textarea id="pix_payload" readonly rows="3"></textarea>
+            <button type="button" id="btnCopy" class="cta-button outline">Copiar código</button>
+          </div>
+
+          <button class="cta-button" type="submit" style="margin-top:16px">Confirmar forma de pagamento</button>
+        </form>
+      </aside>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+
+  <script>
+    window.__PAGAMENTO__ = <%- JSON.stringify(pagamento || null) %>;
+    window.__PIX_CHAVE__ = "<%= process.env.PIX_CHAVE || 'chave@exemplo.com' %>";
+  </script>
+</body>
+</html>

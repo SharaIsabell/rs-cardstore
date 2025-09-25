@@ -31,6 +31,20 @@ router.get('/', (req, res) => {
   res.render('index', { titulo: 'Página Inicial' });
 });
 
+//Helpers para o checkout
+function requireLogin(req, res, next) {
+  if (!req.session.userId) return res.redirect('/login');
+  next();
+}
+
+function detectBrand(num) {
+  if (/^4/.test(num)) return 'VISA';
+  if (/^5[1-5]/.test(num)) return 'MASTERCARD';
+  if (/^3[47]/.test(num)) return 'AMEX';
+  if (/^6(?:011|5)/.test(num)) return 'DISCOVER';
+  return 'CARD';
+}
+
 router.get('/', async (req, res) => {
   try {
     // Busca os 2 produtos mais recentes marcados como "novo"
@@ -319,6 +333,108 @@ const checarVerificado = async (req, res, next) => {
   }
 };
 
+// Inicia o checkout a partir do carrinho (trava de fluxo)
+router.post('/checkout/iniciar', requireLogin, async (req, res) => {
+  try {
+    const user_id = req.session.userId;
+
+    const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+    if (cart.length === 0) { req.session.flash = 'Seu carrinho está vazio.'; return res.redirect('/carrinho'); }
+
+    const carrinho_id = cart[0].id;
+    const [hasItem] = await db.query('SELECT 1 FROM carrinho_itens WHERE carrinho_id = ? LIMIT 1', [carrinho_id]);
+    if (hasItem.length === 0) { req.session.flash = 'Seu carrinho está vazio.'; return res.redirect('/carrinho'); }
+
+    req.session.canAccessCheckout = true; 
+    return res.redirect('/checkout');
+  } catch (e) {
+    console.error('Erro ao iniciar checkout:', e);
+    return res.status(500).send('Erro ao iniciar o checkout.');
+  }
+});
+
+// Tela do checkout
+router.get('/checkout', requireLogin, async (req, res) => {
+  if (!req.session.canAccessCheckout) {
+    req.session.flash = 'Acesse o checkout a partir do carrinho.';
+    return res.redirect('/carrinho');
+  }
+
+  try {
+    const user_id = req.session.userId;
+
+    const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+    if (cart.length === 0) return res.redirect('/carrinho');
+
+    const carrinho_id = cart[0].id;
+    const [items] = await db.query(`
+      SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.imagem_url
+      FROM carrinho_itens ci
+      JOIN produtos p ON ci.produto_id = p.id
+      WHERE ci.carrinho_id = ?`, [carrinho_id]);
+
+    const subtotal = items.reduce((acc, it) => acc + (Number(it.preco) * it.quantidade), 0);
+    const frete = Number(req.session.frete || 0);
+    const total = subtotal + frete;
+
+    const msg = req.session.flash; delete req.session.flash;
+
+    res.render('checkout', {
+      cart: { items, subtotal, frete, total },
+      pagamento: req.session.pagamento || null,
+      message: msg || null
+    });
+  } catch (e) {
+    console.error('Erro no checkout:', e);
+    res.status(500).send('Erro ao carregar o checkout.');
+  }
+});
+
+// Seleção de pagamento (SEM GATEWAY, só valida e guarda na sessão)
+router.post('/checkout/pagamento', requireLogin, async (req, res) => {
+  if (!req.session.canAccessCheckout) {
+    req.session.flash = 'Acesse o checkout a partir do carrinho.';
+    return res.redirect('/carrinho');
+  }
+
+  try {
+    const { metodo, cc_number, cc_holder, cc_exp, cc_cvv } = req.body;
+    const allowed = ['cartao_credito', 'cartao_debito', 'pix'];
+    if (!allowed.includes(metodo)) {
+      req.session.flash = 'Método de pagamento inválido.'; return res.redirect('/checkout');
+    }
+
+    const pagamento = { metodo, status: 'selecionado', at: new Date().toISOString() };
+
+    if (metodo === 'cartao_credito' || metodo === 'cartao_debito') {
+      const num = (cc_number || '').replace(/\D/g,'');
+      const holder = (cc_holder || '').trim();
+      const exp = cc_exp || '';
+      const cvv = cc_cvv || '';
+
+      if (!(num.length >= 13 && num.length <= 19)) { req.session.flash = 'Número do cartão inválido.'; return res.redirect('/checkout'); }
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(exp)) { req.session.flash = 'Validade inválida.'; return res.redirect('/checkout'); }
+      if (!/^\d{3,4}$/.test(cvv)) { req.session.flash = 'CVV inválido.'; return res.redirect('/checkout'); }
+      if (holder.length < 3) { req.session.flash = 'Nome do titular inválido.'; return res.redirect('/checkout'); }
+
+      pagamento.card = { holder, last4: num.slice(-4), brand: detectBrand(num) }; //Não salvar num completo nem CVV em sessão/BD por questões judiciais e de dados
+    }
+
+    if (metodo === 'pix') {
+      const payload = `PIX|chave=${process.env.PIX_CHAVE || 'chave@exemplo.com'}|txid=${Date.now()}`;
+      pagamento.pix = { payload };
+    }
+
+    req.session.pagamento = pagamento;
+    req.session.flash = 'Forma de pagamento selecionada.';
+    return res.redirect('/checkout');
+  } catch (e) {
+    console.error('Erro ao selecionar pagamento:', e);
+    res.status(500).send('Erro ao selecionar pagamento.');
+  }
+});
+
+//Rotas do carrinho
 router.get('/carrinho', async (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login');

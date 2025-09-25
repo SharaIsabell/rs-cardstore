@@ -67,7 +67,9 @@
                         <span>Total</span>
                         <strong id="summary-total">R$ <%= cart.total.toFixed(2) %></strong>
                     </div>
-                    <button class="cta-button checkout-btn">Finalizar Compra</button>
+                    <form action="/checkout/iniciar" method="POST">
+                        <button type="submit" class="cta-button checkout-btn">Finalizar Compra</button>
+                    </form>
                 </div>
             </div>
         <% } else { %>

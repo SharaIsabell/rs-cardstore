@@ -1,0 +1,107 @@
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 24px;
+}
+
+.checkout-left,
+.checkout-right {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+}
+
+.ck-item {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.ck-item:last-child {
+    border-bottom: 0;
+}
+
+.ck-item img {
+    width: 68px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.ck-name {
+    font-weight: 600;
+}
+
+.ck-price {
+    color: #555;
+}
+
+.summary-row,
+.summary-total {
+    display: flex;
+    justify-content: space-between;
+    margin: 8px 0;
+}
+
+.summary-total {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.payment-form .radio {
+    display: block;
+    margin: 8px 0;
+}
+
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.form-row input,
+textarea {
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.card-fields,
+.pix-fields {
+    margin-top: 12px;
+}
+
+.qrcode {
+    width: 180px;
+    height: 180px;
+    background: #fafafa;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    margin: 8px 0;
+}
+
+.alert.success {
+    background: #e9f9ef;
+    color: #0a7a34;
+    border: 1px solid #bde8cb;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+}
+
+.cta-button.outline {
+    background: transparent;
+    color: #0a58ca;
+    border: 1px solid #0a58ca;
+}
