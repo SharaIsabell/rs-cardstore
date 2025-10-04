@@ -249,9 +249,11 @@ router.get('/logout', (req, res) => {
         res.redirect('/');
     });
 });
-// Rota GET para a página de checkout
+
+// Rota GET para a página de checkout 
 router.get('/checkout', async (req, res) => {
     if (!req.session.userId) {
+        if (req.session.frete) delete req.session.frete;
         return res.redirect('/login');
     }
 
@@ -284,12 +286,13 @@ router.get('/checkout', async (req, res) => {
             return acc + (precoFinal * item.quantidade);
         }, 0);
         
-        const frete = 0;
+        const frete = req.session.frete ? req.session.frete.cost : 0;
+        const frete_metodo = req.session.frete ? req.session.frete.name : 'A definir';
         const total = subtotal + frete;
 
         res.render('checkout', {
-            cart: { items, subtotal, frete, total },
-            user: user, 
+            cart: { items, subtotal, frete, frete_metodo, total }, 
+            user: user,
             message: null
         });
     } catch (e) {
@@ -304,12 +307,13 @@ router.post('/process_payment', async (req, res) => {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
 
+    const frete = req.session.frete ? req.session.frete.cost : 0;
     const { payment_method } = req.body;
     const user_id = req.session.userId;
     const connection = await db.getConnection();
 
     try {
-        // Obter o valor total do carrinho a partir do banco de dados
+       
         const [cart] = await connection.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
         if (cart.length === 0) throw new Error('Carrinho não encontrado.');
         
@@ -321,10 +325,13 @@ router.post('/process_payment', async (req, res) => {
         );
         if (items.length === 0) throw new Error('Carrinho vazio.');
 
-        const transaction_amount = items.reduce((acc, item) => {
+        const subtotal = items.reduce((acc, item) => {
             const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
             return acc + (precoFinal * item.quantidade);
         }, 0);
+        
+        // O valor da transação para o MP é o total (subtotal + frete)
+        const transaction_amount = subtotal + frete;
 
         let paymentResult;
         const idempotencyKey = uuidv4();
@@ -347,9 +354,12 @@ router.post('/process_payment', async (req, res) => {
             paymentResult = await payment.create({ body: card_payment_data, requestOptions: { idempotencyKey } });
 
             if (paymentResult.status === 'approved') {
-                const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago');
+                // Passa o frete para a função createOrder
+                const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete);
                 await createPaymentRecord(connection, pedido_id, payment_method_id.includes('credit') ? 'credito' : 'debito', 'aprovado');
                 await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
+                
+                delete req.session.frete; // Limpa o frete da sessão
                 await connection.commit();
                 return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
             } else {
@@ -359,8 +369,8 @@ router.post('/process_payment', async (req, res) => {
 
         } else if (payment_method === 'pix') {
             const { email } = req.body;
-            // Cria um pedido com status 'pendente' antes de gerar o Pix
-            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente');
+            // Passa o frete para a função createOrder
+            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete);
             
             const pix_payment_data = {
                 transaction_amount: parseFloat(transaction_amount.toFixed(2)),
@@ -374,6 +384,8 @@ router.post('/process_payment', async (req, res) => {
             paymentResult = await payment.create({ body: pix_payment_data, requestOptions: { idempotencyKey } });
 
             await createPaymentRecord(connection, pedido_id, 'pix', 'pendente', paymentResult.id);
+            
+            delete req.session.frete; // Limpa o frete da sessão
             await connection.commit();
             
             return res.status(201).json({
@@ -396,11 +408,10 @@ router.post('/process_payment', async (req, res) => {
     }
 });
 
-// Funções auxiliares
-async function createOrder(connection, user_id, total, items, status) {
+async function createOrder(connection, user_id, total, items, status, frete) { 
     const [pedidoResult] = await connection.query(
-        'INSERT INTO pedidos (user_id, status, total) VALUES (?, ?, ?)',
-        [user_id, status, total]
+        'INSERT INTO pedidos (user_id, status, total, frete) VALUES (?, ?, ?, ?)', 
+        [user_id, status, total, frete]
     );
     const pedido_id = pedidoResult.insertId;
     const pedidoItensData = items.map(item => [
@@ -606,6 +617,21 @@ router.post('/carrinho/calcular-frete', async (req, res) => {
         console.error('ERRO DETALHADO AO CALCULAR FRETE:', error.response ? error.response.data : error.message);
         res.status(500).json({ error: 'Não foi possível calcular o frete. Verifique o CEP e tente novamente.' });
     }
+});
+
+// Rota para salvar a opção de frete na sessão do usuário
+router.post('/carrinho/salvar-frete', (req, res) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado.' });
+    }
+    const { cost, name } = req.body;
+    if (typeof cost !== 'number' || typeof name !== 'string') {
+        return res.status(400).json({ error: 'Dados de frete inválidos.' });
+    }
+    
+    // Salva o frete na sessão
+    req.session.frete = { cost, name };
+    res.json({ success: true, message: 'Frete salvo na sessão.' });
 });
 
 module.exports = router;

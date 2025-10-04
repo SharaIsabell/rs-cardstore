@@ -7,6 +7,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const mp = new MercadoPago(mpPublicKey);
 
+    // --- Lógica para o Cartão Animado ---
+    new Card({
+        form: '#form-checkout-card',
+        container: '.card-wrapper',
+        formSelectors: {
+            numberInput: 'input[name="number"]',
+            expiryInput: 'input[name="expiry"]',
+            cvcInput: 'input[name="cvc"]',
+            nameInput: 'input[name="name"]'
+        },
+        placeholders: {
+            number: '•••• •••• •••• ••••',
+            name: 'Nome Completo',
+            expiry: '••/••',
+            cvc: '•••'
+        }
+    });
+
     // Elementos do DOM
     const paymentMethodRadios = document.querySelectorAll('input[name="paymentMethod"]');
     const cardFormContainer = document.getElementById('form-checkout-card');
@@ -17,8 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const pixQrCodeContainer = document.getElementById('pix-qr-code');
     const pixQrTextContainer = document.getElementById('pix-qr-text');
     const pixCopyButton = document.getElementById('pix-copy-button');
+    const cardWrapper = document.querySelector('.card-wrapper');
 
-    let cardForm; // Instância do CardForm
+    let cardForm;
 
     // Função para exibir erros
     const showErrorMessage = (message) => {
@@ -41,29 +60,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const handlePaymentMethodChange = () => {
         const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
         cardFormContainer.style.display = selectedMethod === 'card' ? 'block' : 'none';
+        cardWrapper.style.display = selectedMethod === 'card' ? 'block' : 'none';
         pixContainer.style.display = selectedMethod === 'pix' ? 'block' : 'none';
         errorMessageContainer.style.display = 'none';
     };
 
     // Inicializa o formulário de cartão de crédito/débito
-    const initializeCardForm = () => {
+    const initializeCardForm = async () => {
         if (cardForm) {
             cardForm.unmount();
         }
-        cardForm = mp.cardForm({
+        
+        cardForm = await mp.cardForm({
             amount: window.totalAmount,
-            iframe: true,
+            iframe: false,
             form: {
                 id: "form-checkout-card",
-                cardNumber: { id: "form-checkout__cardNumber", placeholder: "Número do cartão" },
-                expirationDate: { id: "form-checkout__expirationDate", placeholder: "MM/YY" },
-                securityCode: { id: "form-checkout__securityCode", placeholder: "CVV" },
                 cardholderName: { id: "form-checkout__cardholderName" },
-                issuer: { id: "form-checkout__issuer" },
-                installments: { id: "form-checkout__installments" },
+                cardholderEmail: { id: "form-checkout__cardholderEmail" },
                 identificationType: { id: "form-checkout__identificationType" },
                 identificationNumber: { id: "form-checkout__identificationNumber" },
-                cardholderEmail: { id: "form-checkout__cardholderEmail" },
+                
+                cardNumber: { id: "form-checkout__cardNumber" },        // Campo do número do cartão
+                securityCode: { id: "form-checkout__securityCode" },    // Campo do CVV
+                expirationDate: { id: "form-checkout__expirationDate" },// Campo da data de validade (MM/AA)
+                issuer: { id: "form-checkout__issuer" },                // Campo do Emissor (será populado automaticamente)
+                installments: { id: "form-checkout__installments" },    // Campo de Parcelas (será populado automaticamente)
             },
             callbacks: {
                 onFormMounted: error => { if (error) console.warn("Form Mounted error: ", error); },
@@ -109,6 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                     .catch(error => showErrorMessage('Não foi possível conectar ao servidor.'))
                     .finally(() => hideLoading());
+                },
+                onCardTokenized: (token) => {
+                    console.log("Card tokenized: ", token);
                 },
             },
         });
