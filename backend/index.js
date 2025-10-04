@@ -15,6 +15,8 @@ const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCE
 const payment = new Payment(client);
 
 router.use(bodyParser.urlencoded({ extended: true }));
+// Middleware específico para a rota do webhook para usar o raw body
+router.use('/mercado-pago-webhook', express.raw({ type: 'application/json' }));
 router.use(express.json());
 
 router.use(session({
@@ -250,7 +252,6 @@ router.get('/logout', (req, res) => {
     });
 });
 
-// Rota GET para a página de checkout 
 router.get('/checkout', async (req, res) => {
     if (!req.session.userId) {
         if (req.session.frete) delete req.session.frete;
@@ -285,7 +286,6 @@ router.get('/checkout', async (req, res) => {
             const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
             return acc + (precoFinal * item.quantidade);
         }, 0);
-        
         const frete = req.session.frete ? req.session.frete.cost : 0;
         const frete_metodo = req.session.frete ? req.session.frete.name : 'A definir';
         const total = subtotal + frete;
@@ -313,7 +313,6 @@ router.post('/process_payment', async (req, res) => {
     const connection = await db.getConnection();
 
     try {
-       
         const [cart] = await connection.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
         if (cart.length === 0) throw new Error('Carrinho não encontrado.');
         
@@ -383,6 +382,8 @@ router.post('/process_payment', async (req, res) => {
             };
             paymentResult = await payment.create({ body: pix_payment_data, requestOptions: { idempotencyKey } });
 
+            console.log(`PIX CRIADO! Salve este ID para a simulação: ${paymentResult.id}`);
+
             await createPaymentRecord(connection, pedido_id, 'pix', 'pendente', paymentResult.id);
             
             delete req.session.frete; // Limpa o frete da sessão
@@ -408,6 +409,7 @@ router.post('/process_payment', async (req, res) => {
     }
 });
 
+// Funções auxiliares 
 async function createOrder(connection, user_id, total, items, status, frete) { 
     const [pedidoResult] = await connection.query(
         'INSERT INTO pedidos (user_id, status, total, frete) VALUES (?, ?, ?, ?)', 
@@ -433,7 +435,6 @@ async function createPaymentRecord(connection, pedido_id, metodo, status, mp_pay
         [pedido_id, metodo, status, mp_payment_id]
     );
 }
-
 
 // Rota de Confirmação
 router.get('/pedido/confirmacao/:id', async (req, res) => {
@@ -632,6 +633,81 @@ router.post('/carrinho/salvar-frete', (req, res) => {
     // Salva o frete na sessão
     req.session.frete = { cost, name };
     res.json({ success: true, message: 'Frete salvo na sessão.' });
+});
+
+// --- Para o frontend verificar o status do pedido ---
+router.get('/pedido/status/:id', async (req, res) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ error: "Não autorizado" });
+    }
+    try {
+        const [pedidos] = await db.query(
+            'SELECT status FROM pedidos WHERE id = ? AND user_id = ?',
+            [req.params.id, req.session.userId]
+        );
+        if (pedidos.length > 0) {
+            res.json({ status: pedidos[0].status });
+        } else {
+            res.status(404).json({ error: 'Pedido não encontrado.' });
+        }
+    } catch (error) {
+        console.error('Erro ao verificar status do pedido:', error);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+
+// ---  Webhook para receber notificações do Mercado Pago ---
+router.post('/mercado-pago-webhook', async (req, res) => {
+    console.log('--- NOVO WEBHOOK RECEBIDO ---');
+    const notification = req.body;
+
+    try {
+        const notification = JSON.parse(req.body);
+        
+        if (notification.type === 'payment' && notification.data && notification.data.id) {
+            const paymentId = notification.data.id;
+            console.log(`[LOG 1] Notificação de pagamento recebida. ID do Pagamento (mp_payment_id): ${paymentId}`);
+
+            const paymentInfo = await payment.get({ id: paymentId });
+            console.log('[LOG 2] Informações do pagamento obtidas do MP:', { id: paymentInfo.id, status: paymentInfo.status });
+
+            if (paymentInfo && (paymentInfo.status === 'approved' || paymentInfo.status === 'pending')){
+                const mp_payment_id = paymentInfo.id;
+
+                const connection = await db.getConnection();
+                try {
+                    console.log(`[LOG 3] Buscando no banco de dados pelo mp_payment_id: ${mp_payment_id}`);
+                    const [pagamentos] = await connection.query(
+                        'SELECT pedido_id FROM pagamentos WHERE mp_payment_id = ?',
+                        [mp_payment_id]
+                    );
+
+                    if (pagamentos.length > 0) {
+                        const pedido_id = pagamentos[0].pedido_id;
+                        console.log(`[LOG 4] Pedido encontrado! ID do Pedido: ${pedido_id}. Iniciando atualização...`);
+
+                        await connection.beginTransaction();
+                        await connection.query("UPDATE pagamentos SET status = 'aprovado' WHERE mp_payment_id = ?", [mp_payment_id]);
+                        await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
+                        await connection.commit();
+
+                        console.log(`[LOG 5] Sucesso! Pedido ${pedido_id} atualizado para 'pago'.`);
+                    } else {
+                        console.warn(`[LOG FALHA] Nenhum pedido encontrado no banco de dados para o mp_payment_id: ${mp_payment_id}`);
+                        // Mesmo em falha, não vamos reverter para garantir que a transação termine.
+                    }
+                } catch (dbError) {
+                    console.error('[LOG ERRO DB] Erro no banco de dados:', dbError);
+                } finally {
+                    if (connection) connection.release();
+                }
+            }
+        }
+        res.status(200).send('OK');
+    } catch (error) {
+        console.error('[LOG ERRO GERAL] Erro ao processar webhook:', error);
+        res.status(500).send('Erro no webhook.');
+    }
 });
 
 module.exports = router;

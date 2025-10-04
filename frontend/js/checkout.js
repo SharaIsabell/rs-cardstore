@@ -24,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cvc: '•••'
         }
     });
+    
+    let pollingInterval;
 
     // Elementos do DOM
     const paymentMethodRadios = document.querySelectorAll('input[name="paymentMethod"]');
@@ -58,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Altera a visibilidade dos formulários
     const handlePaymentMethodChange = () => {
+        if (pollingInterval) clearInterval(pollingInterval);
+
         const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
         cardFormContainer.style.display = selectedMethod === 'card' ? 'block' : 'none';
         cardWrapper.style.display = selectedMethod === 'card' ? 'block' : 'none';
@@ -80,12 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardholderEmail: { id: "form-checkout__cardholderEmail" },
                 identificationType: { id: "form-checkout__identificationType" },
                 identificationNumber: { id: "form-checkout__identificationNumber" },
-                
-                cardNumber: { id: "form-checkout__cardNumber" },        // Campo do número do cartão
-                securityCode: { id: "form-checkout__securityCode" },    // Campo do CVV
-                expirationDate: { id: "form-checkout__expirationDate" },// Campo da data de validade (MM/AA)
-                issuer: { id: "form-checkout__issuer" },                // Campo do Emissor (será populado automaticamente)
-                installments: { id: "form-checkout__installments" },    // Campo de Parcelas (será populado automaticamente)
+                cardNumber: { id: "form-checkout__cardNumber" },
+                securityCode: { id: "form-checkout__securityCode" },
+                expirationDate: { id: "form-checkout__expirationDate" },
+                issuer: { id: "form-checkout__issuer" },
+                installments: { id: "form-checkout__installments" },
             },
             callbacks: {
                 onFormMounted: error => { if (error) console.warn("Form Mounted error: ", error); },
@@ -100,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         paymentMethodId: payment_method_id,
                         issuerId: issuer_id,
                         cardholderEmail: email,
-                        amount,
                         token,
                         installments,
                         identificationNumber,
@@ -132,14 +134,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     .catch(error => showErrorMessage('Não foi possível conectar ao servidor.'))
                     .finally(() => hideLoading());
                 },
-                onCardTokenized: (token) => {
-                    console.log("Card tokenized: ", token);
-                },
             },
         });
     };
     
-    // Gera o pagamento PIX
+    // --- Gera o pagamento PIX e inicia a verificação ---
     const handleGeneratePix = () => {
         showLoading();
         generatePixButton.disabled = true;
@@ -160,7 +159,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 pixCopyButton.style.display = 'block';
                 pixQrTextContainer.style.display = 'block';
                 generatePixButton.style.display = 'none';
-                document.querySelector('#payment-pix-container p').textContent = 'Escaneie o QR Code ou use o código abaixo. O pedido será confirmado após o pagamento.';
+                document.querySelector('#payment-pix-container p').textContent = 'Escaneie o QR Code para pagar. Aguardando confirmação...';
+                
+                // Inicia a verificação do status do pagamento
+                startPolling(data.orderId);
             } else {
                 showErrorMessage(data.message || 'Não foi possível gerar o PIX.');
                 generatePixButton.disabled = false;
@@ -172,6 +174,24 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .finally(() => hideLoading());
     };
+
+    // --- Verifica o status do pedido no backend ---
+    function startPolling(orderId) {
+        pollingInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/pedido/status/${orderId}`);
+                const data = await response.json();
+
+                if (data.status === 'pago') {
+                    clearInterval(pollingInterval); // Para a verificação
+                    // Redireciona para a página de sucesso
+                    window.location.href = `/pedido/confirmacao/${orderId}`;
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status:', error);
+            }
+        }, 5000); // Verifica a cada 5 segundos
+    }
 
     // Copia o código PIX
     pixCopyButton.addEventListener('click', () => {
