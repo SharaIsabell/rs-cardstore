@@ -1,81 +1,166 @@
-(function () {
-  const radios = document.querySelectorAll('input[name="metodo"]');
-  const card = document.getElementById('card-fields');
-  const pix = document.getElementById('pix-fields');
-  const qrcodeEl = document.getElementById('qrcode');
-  const payloadEl = document.getElementById('pix_payload');
-  const btnCopy = document.getElementById('btnCopy');
-
-  function ensurePixPayload() {
-    if (!payloadEl) return '';
-    if (payloadEl.value) return payloadEl.value;
-    const base = `PIX|chave=${window.__PIX_CHAVE__ || 'chave@exemplo.com'}|txid=${Date.now()}`;
-    payloadEl.value = base;
-    return base;
-  }
-
-  function renderQR() {
-    if (!qrcodeEl) return;
-    qrcodeEl.innerHTML = '';
-    const text = ensurePixPayload();
-    if (window.QRCode) {
-      new QRCode(qrcodeEl, { text, width: 180, height: 180 });
-    } else {
-      const p = document.createElement('p');
-      p.className = 'muted';
-      p.textContent = 'QR indisponível. Use o código abaixo:';
-      qrcodeEl.appendChild(p);
+document.addEventListener('DOMContentLoaded', () => {
+    const mpPublicKey = window.mpPublicKey;
+    if (!mpPublicKey) {
+        console.error('Chave pública do Mercado Pago não encontrada.');
+        return;
     }
-  }
 
-  function updateUI() {
-    const val = document.querySelector('input[name="metodo"]:checked')?.value;
-    if (!val) return;
-    const showCard = (val === 'cartao_credito' || val === 'cartao_debito');
-    card && (card.style.display = showCard ? 'block' : 'none');
-    pix && (pix.style.display = (val === 'pix') ? 'block' : 'none');
-    if (val === 'pix') renderQR();
-  }
+    const mp = new MercadoPago(mpPublicKey);
 
-  radios.forEach(r => r.addEventListener('change', updateUI));
-  updateUI();
+    // Elementos do DOM
+    const paymentMethodRadios = document.querySelectorAll('input[name="paymentMethod"]');
+    const cardFormContainer = document.getElementById('form-checkout-card');
+    const pixContainer = document.getElementById('payment-pix-container');
+    const errorMessageContainer = document.getElementById('payment-error-message');
+    const progressBar = document.querySelector('.progress-bar');
+    const generatePixButton = document.getElementById('generate-pix-button');
+    const pixQrCodeContainer = document.getElementById('pix-qr-code');
+    const pixQrTextContainer = document.getElementById('pix-qr-text');
+    const pixCopyButton = document.getElementById('pix-copy-button');
 
-  // máscaras
-  const ccNum = document.getElementById('cc_number');
-  const ccExp = document.getElementById('cc_exp');
-  const ccCvv = document.getElementById('cc_cvv');
+    let cardForm; // Instância do CardForm
 
-  ccNum && ccNum.addEventListener('input', e => {
-    e.target.value = e.target.value.replace(/\D/g,'').slice(0,19).replace(/(.{4})/g,'$1 ').trim();
-  });
-  ccExp && ccExp.addEventListener('input', e => {
-    let v = e.target.value.replace(/\D/g,'').slice(0,4);
-    if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
-    e.target.value = v;
-  });
-  ccCvv && ccCvv.addEventListener('input', e => {
-    e.target.value = e.target.value.replace(/\D/g,'').slice(0,4);
-  });
+    // Função para exibir erros
+    const showErrorMessage = (message) => {
+        errorMessageContainer.textContent = message;
+        errorMessageContainer.style.display = 'block';
+        hideLoading();
+    };
 
-  btnCopy && btnCopy.addEventListener('click', async () => {
-    try {
-      ensurePixPayload();
-      await navigator.clipboard.writeText(payloadEl.value);
-      btnCopy.textContent = 'Copiado!';
-      setTimeout(() => btnCopy.textContent = 'Copiar código', 1500);
-    } catch {
-      alert('Não foi possível copiar. Selecione e copie manualmente.');
-    }
-  });
+    // Funções para controlar o loading
+    const showLoading = () => {
+        progressBar.style.display = 'block';
+        progressBar.removeAttribute('value');
+    };
+    const hideLoading = () => {
+        progressBar.style.display = 'none';
+        progressBar.setAttribute('value', '0');
+    };
 
-  // pré-seleção
-  const pagamento = window.__PAGAMENTO__;
-  if (pagamento && pagamento.metodo) {
-    const pre = document.querySelector(`input[name="metodo"][value="${pagamento.metodo}"]`);
-    if (pre) { pre.checked = true; updateUI(); }
-    if (pagamento.metodo === 'pix' && pagamento.pix && pagamento.pix.payload) {
-      payloadEl.value = pagamento.pix.payload;
-      renderQR();
-    }
-  }
-})();
+    // Altera a visibilidade dos formulários
+    const handlePaymentMethodChange = () => {
+        const selectedMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+        cardFormContainer.style.display = selectedMethod === 'card' ? 'block' : 'none';
+        pixContainer.style.display = selectedMethod === 'pix' ? 'block' : 'none';
+        errorMessageContainer.style.display = 'none';
+    };
+
+    // Inicializa o formulário de cartão de crédito/débito
+    const initializeCardForm = () => {
+        if (cardForm) {
+            cardForm.unmount();
+        }
+        cardForm = mp.cardForm({
+            amount: window.totalAmount,
+            iframe: true,
+            form: {
+                id: "form-checkout-card",
+                cardNumber: { id: "form-checkout__cardNumber", placeholder: "Número do cartão" },
+                expirationDate: { id: "form-checkout__expirationDate", placeholder: "MM/YY" },
+                securityCode: { id: "form-checkout__securityCode", placeholder: "CVV" },
+                cardholderName: { id: "form-checkout__cardholderName" },
+                issuer: { id: "form-checkout__issuer" },
+                installments: { id: "form-checkout__installments" },
+                identificationType: { id: "form-checkout__identificationType" },
+                identificationNumber: { id: "form-checkout__identificationNumber" },
+                cardholderEmail: { id: "form-checkout__cardholderEmail" },
+            },
+            callbacks: {
+                onFormMounted: error => { if (error) console.warn("Form Mounted error: ", error); },
+                onFetching: (resource) => {
+                    showLoading();
+                    return () => hideLoading();
+                },
+                onSubmit: event => {
+                    event.preventDefault();
+                    showLoading();
+                    const {
+                        paymentMethodId: payment_method_id,
+                        issuerId: issuer_id,
+                        cardholderEmail: email,
+                        amount,
+                        token,
+                        installments,
+                        identificationNumber,
+                        identificationType,
+                    } = cardForm.getCardFormData();
+
+                    fetch("/process_payment", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            payment_method: 'card',
+                            token,
+                            issuer_id,
+                            payment_method_id,
+                            installments: Number(installments),
+                            email,
+                            identificationType,
+                            identificationNumber,
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            window.location.href = `/pedido/confirmacao/${result.orderId}`;
+                        } else {
+                            showErrorMessage(result.message || 'Erro inesperado.');
+                        }
+                    })
+                    .catch(error => showErrorMessage('Não foi possível conectar ao servidor.'))
+                    .finally(() => hideLoading());
+                },
+            },
+        });
+    };
+    
+    // Gera o pagamento PIX
+    const handleGeneratePix = () => {
+        showLoading();
+        generatePixButton.disabled = true;
+
+        fetch("/process_payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                payment_method: 'pix',
+                email: window.userEmail,
+            }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.success) {
+                pixQrCodeContainer.innerHTML = `<img src="data:image/jpeg;base64,${data.qr_code}" alt="QR Code PIX">`;
+                pixQrTextContainer.value = data.qr_code_text;
+                pixCopyButton.style.display = 'block';
+                pixQrTextContainer.style.display = 'block';
+                generatePixButton.style.display = 'none';
+                document.querySelector('#payment-pix-container p').textContent = 'Escaneie o QR Code ou use o código abaixo. O pedido será confirmado após o pagamento.';
+            } else {
+                showErrorMessage(data.message || 'Não foi possível gerar o PIX.');
+                generatePixButton.disabled = false;
+            }
+        })
+        .catch(() => {
+            showErrorMessage('Erro de comunicação ao gerar o PIX.');
+            generatePixButton.disabled = false;
+        })
+        .finally(() => hideLoading());
+    };
+
+    // Copia o código PIX
+    pixCopyButton.addEventListener('click', () => {
+        pixQrTextContainer.select();
+        document.execCommand('copy');
+        pixCopyButton.textContent = 'Copiado!';
+        setTimeout(() => { pixCopyButton.textContent = 'Copiar Código'; }, 2000);
+    });
+
+    // Adiciona os listeners
+    paymentMethodRadios.forEach(radio => radio.addEventListener('change', handlePaymentMethodChange));
+    generatePixButton.addEventListener('click', handleGeneratePix);
+
+    // Inicialização
+    handlePaymentMethodChange();
+    initializeCardForm();
+});

@@ -2,21 +2,22 @@
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 24px;
+    align-items: start;
 }
 
 .checkout-left,
 .checkout-right {
     background: #fff;
     border-radius: 16px;
-    padding: 16px;
+    padding: 24px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
 }
 
 .ck-item {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
-    padding: 8px 0;
+    padding: 12px 0;
     border-bottom: 1px solid #eee;
 }
 
@@ -39,6 +40,10 @@
     color: #555;
 }
 
+.summary {
+    margin-bottom: 24px;
+}
+
 .summary-row,
 .summary-total {
     display: flex;
@@ -47,61 +52,136 @@
 }
 
 .summary-total {
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     font-weight: 700;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #ddd;
 }
 
-.payment-form .radio {
-    display: block;
-    margin: 8px 0;
+/* Estilos para seleção de método de pagamento */
+.payment-methods {
+    margin-bottom: 24px;
 }
 
-.form-row {
+.payment-options {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
-}
-
-.form-row input,
-textarea {
-    padding: 10px 12px;
+    gap: 20px;
     border: 1px solid #ddd;
     border-radius: 10px;
+    padding: 10px;
 }
 
+.payment-options label {
+    flex: 1;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+}
+
+.payment-options input[type="radio"] {
+    display: none; /* Esconde o radio button padrão */
+}
+
+.payment-options input[type="radio"]:checked + label {
+    background-color: var(--color-blue-light);
+    color: var(--color-white);
+}
+
+.payment-options label:not(:has(:checked)):hover {
+    background-color: #f0f0f0;
+}
+
+
+/* Estilos dos formulários */
+.payment-form {
+    margin-top: 16px;
+}
+.form-row {
+    margin-bottom: 12px;
+}
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+.mp-container { /* Container para campos do MP.js */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    height: 48px; /* Altura consistente */
+}
 .grid2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
 
-.card-fields,
-.pix-fields {
-    margin-top: 12px;
+/* Seção PIX */
+#payment-pix-container {
+    text-align: center;
 }
-
-.qrcode {
-    width: 180px;
-    height: 180px;
-    background: #fafafa;
-    display: grid;
-    place-items: center;
+.pix-qr {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0;
+}
+.pix-qr img {
+    border: 6px solid #f0f0f0;
     border-radius: 12px;
-    margin: 8px 0;
 }
-
-.alert.success {
-    background: #e9f9ef;
-    color: #0a7a34;
-    border: 1px solid #bde8cb;
-    padding: 10px 12px;
-    border-radius: 10px;
-    margin-bottom: 12px;
+.pix-code {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: none;
+    text-align: center;
+    font-size: 0.9rem;
+    background-color: #f9f9f9;
+    margin-bottom: 10px;
+    display: none;
 }
-
 .cta-button.outline {
     background: transparent;
-    color: #0a58ca;
-    border: 1px solid #0a58ca;
+    color: var(--color-blue-dark);
+    border: 1px solid var(--color-blue-dark);
+    display: none; /* Escondido inicialmente */
+    width: 100%;
+}
+
+.progress-bar {
+    width: 100%;
+    margin-top: 16px;
+}
+
+/* Página de confirmação */
+.confirmation-box {
+    text-align: center;
+    max-width: 600px;
+    margin: 40px auto;
+    padding: 40px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .06);
+}
+.confirmation-box .order-summary {
+    text-align: left;
+    margin: 30px 0;
+}
+.confirmation-box .order-summary h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.pix-instructions {
+    background-color: #fff3cd;
+    border: 1px solid #ffeeba;
+    color: #856404;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
 }

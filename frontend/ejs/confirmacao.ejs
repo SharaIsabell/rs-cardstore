@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedido Confirmado - RS Card Store</title>
+    <link rel="stylesheet" href="../css/index.css">
+    <link rel="stylesheet" href="../css/checkout.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+
+    <main class="container section">
+        <div class="confirmation-box">
+            <% if (pedido.metodo === 'pix' && pedido.status === 'pendente') { %>
+                <h1 class="section-title">⏳ Pedido Aguardando Pagamento</h1>
+                <p>Seu pedido foi criado! Agora só falta concluir o pagamento do Pix para que ele seja confirmado.</p>
+                <div class="pix-instructions">
+                    <p>Verifique o QR Code ou o código "copia e cola" na página anterior para pagar. O pedido será aprovado automaticamente assim que o pagamento for identificado.</p>
+                </div>
+            <% } else { %>
+                <h1 class="section-title">🎉 Pedido Confirmado!</h1>
+                <p>Obrigado pela sua compra. Seu pagamento foi aprovado e seu pedido já está sendo preparado.</p>
+            <% } %>
+
+            <div class="order-summary">
+                <h2>Resumo do Pedido #<%= pedido.id %></h2>
+                <p><strong>Data:</strong> <%= pedido.data_pedido %></p>
+                
+                <div class="order-items-list">
+                    <% itens.forEach(item => { %>
+                        <div class="ck-item">
+                            <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
+                            <div>
+                                <div class="ck-name"><%= item.nome %></div>
+                                <div class="ck-price">R$ <%= Number(item.preco_unitario).toFixed(2) %> × <%= item.quantidade %></div>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+
+                <div class="summary-total">
+                    <span>Total</span>
+                    <strong>R$ <%= Number(pedido.total).toFixed(2) %></strong>
+                </div>
+            </div>
+
+            <a href="/" class="cta-button">Voltar para a Loja</a>
+        </div>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

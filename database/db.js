@@ -91,6 +91,10 @@ async function main() {
       FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
     );
 
+    ALTER TABLE pagamentos MODIFY COLUMN status ENUM('aprovado', 'recusado', 'pendente');
+
+    ALTER TABLE pagamentos ADD COLUMN mp_payment_id VARCHAR(255);
+
     CREATE TABLE IF NOT EXISTS fidelidade (
       id INT AUTO_INCREMENT PRIMARY KEY,
       user_id INT,

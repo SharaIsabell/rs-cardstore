@@ -2,33 +2,27 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Checkout - Seleção de Pagamento</title>
-  <link rel="stylesheet" href="/css/index.css">
-  <link rel="stylesheet" href="/css/checkout.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
-  <script src="/js/checkout.js" defer></script>
+  <title>Checkout - Pagamento</title>
+  <link rel="stylesheet" href="../css/index.css">
+  <link rel="stylesheet" href="../css/checkout.css">
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
 <body>
   <%- include('partials/header') %>
 
   <main class="container section">
-    <h1 class="section-title">Pagamento</h1>
-
-    <% if (message) { %>
-      <div class="alert success"><%= message %></div>
-    <% } %>
+    <h1 class="section-title">Finalizar Pagamento</h1>
 
     <div class="checkout-grid">
       <section class="checkout-left">
-        <h2 class="section-subtitle">Seu pedido</h2>
-
+        <h2 class="section-subtitle">Itens do Pedido</h2>
         <% if (cart && cart.items && cart.items.length) { %>
           <% cart.items.forEach(item => { %>
             <div class="ck-item">
               <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
               <div>
                 <div class="ck-name"><%= item.nome %></div>
-                <div class="ck-price">R$ <%= Number(item.preco).toFixed(2) %> × <%= item.quantidade %></div>
+                <div class="ck-price">R$ <%= (item.preco * (1 - item.desconto_percentual / 100)).toFixed(2) %> × <%= item.quantidade %></div>
               </div>
             </div>
           <% }) %>
@@ -38,60 +32,57 @@
       </section>
 
       <aside class="checkout-right">
-        <h2 class="section-subtitle">Resumo</h2>
-        <div class="summary-row"><span>Subtotal</span><strong>R$ <%= cart.subtotal.toFixed(2) %></strong></div>
-        <div class="summary-row"><span>Frete</span><strong>R$ <%= cart.frete.toFixed(2) %></strong></div>
-        <div class="summary-total"><span>Total</span><strong>R$ <%= cart.total.toFixed(2) %></strong></div>
+        <div class="summary">
+            <h2 class="section-subtitle">Resumo</h2>
+            <div class="summary-row"><span>Subtotal</span><strong>R$ <%= cart.subtotal.toFixed(2) %></strong></div>
+            <div class="summary-row"><span>Frete</span><strong>R$ <%= cart.frete.toFixed(2) %></strong></div>
+            <div class="summary-total"><span>Total</span><strong id="summary-total" data-total="<%= cart.total.toFixed(2) %>">R$ <%= cart.total.toFixed(2) %></strong></div>
+        </div>
 
-        <form action="/checkout/pagamento" method="POST" class="payment-form">
-          <h3 class="section-subtitle" style="margin-top: 16px;">Selecione o método</h3>
-
-          <label class="radio">
-            <input type="radio" name="metodo" value="cartao_credito" <%= (pagamento && pagamento.metodo==='cartao_credito') ? 'checked' : '' %> >
-            Cartão de Crédito
-          </label>
-          <label class="radio">
-            <input type="radio" name="metodo" value="cartao_debito" <%= (pagamento && pagamento.metodo==='cartao_debito') ? 'checked' : '' %> >
-            Cartão de Débito
-          </label>
-          <label class="radio">
-            <input type="radio" name="metodo" value="pix" <%= (pagamento && pagamento.metodo==='pix') ? 'checked' : '' %> >
-            Pix
-          </label>
-
-          <div id="card-fields" class="card-fields" style="display:none">
-            <div class="form-row">
-              <label>Número do cartão</label>
-              <input id="cc_number" name="cc_number" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000" maxlength="19">
+        <div class="payment-methods">
+            <h3 class="section-subtitle">Escolha a forma de pagamento</h3>
+            <div class="payment-options">
+                <label>
+                    <input type="radio" name="paymentMethod" value="card" checked> Cartão de Crédito/Débito
+                </label>
+                <label>
+                    <input type="radio" name="paymentMethod" value="pix"> PIX
+                </label>
             </div>
+        </div>
+
+        <!-- Formulário de Cartão -->
+        <form id="form-checkout-card" class="payment-form">
             <div class="form-row">
-              <label>Nome do titular</label>
-              <input id="cc_holder" name="cc_holder" autocomplete="cc-name" placeholder="Como está no cartão">
+                <label for="form-checkout__cardholderEmail">E-mail</label>
+                <input type="email" id="form-checkout__cardholderEmail" name="cardholderEmail" class="form-control" value="<%= user.email %>"/>
             </div>
             <div class="grid2">
-              <div class="form-row">
-                <label>Validade (MM/AA)</label>
-                <input id="cc_exp" name="cc_exp" inputmode="numeric" placeholder="MM/AA" maxlength="5">
-              </div>
-              <div class="form-row">
-                <label>CVV</label>
-                <input id="cc_cvv" name="cc_cvv" inputmode="numeric" placeholder="123" maxlength="4">
-              </div>
+                <div class="form-row"><select id="form-checkout__identificationType" class="form-control"></select></div>
+                <div class="form-row"><input type="text" id="form-checkout__identificationNumber" class="form-control" placeholder="Número do documento"/></div>
             </div>
-            <% if (pagamento && pagamento.card) { %>
-              <p class="muted">Selecionado: <%= pagamento.card.brand %> final <%= pagamento.card.last4 %></p>
-            <% } %>
-          </div>
-
-          <div id="pix-fields" class="pix-fields" style="display:none">
-            <p>Escaneie o QR Code ou copie o código “copia e cola”.</p>
-            <div id="qrcode" class="qrcode"></div>
-            <textarea id="pix_payload" readonly rows="3"></textarea>
-            <button type="button" id="btnCopy" class="cta-button outline">Copiar código</button>
-          </div>
-
-          <button class="cta-button" type="submit" style="margin-top:16px">Confirmar forma de pagamento</button>
+            <div class="form-row"><input type="text" id="form-checkout__cardholderName" class="form-control" placeholder="Titular do cartão"/></div>
+            <div class="form-row"><div id="form-checkout__cardNumber" class="mp-container"></div></div>
+            <div class="grid2">
+                <div class="form-row"><div id="form-checkout__expirationDate" class="mp-container"></div></div>
+                <div class="form-row"><div id="form-checkout__securityCode" class="mp-container"></div></div>
+            </div>
+            <div class="form-row"><select id="form-checkout__issuer" class="form-control"></select></div>
+            <div class="form-row"><select id="form-checkout__installments" class="form-control"></select></div>
+            <button type="submit" id="form-checkout__submit" class="cta-button">Pagar com Cartão</button>
         </form>
+
+        <!-- Seção PIX -->
+        <div id="payment-pix-container" class="payment-form" style="display: none;">
+             <p>Pague com Pix para confirmar sua compra na hora. O código expira em 30 minutos.</p>
+             <div id="pix-qr-code" class="pix-qr"></div>
+             <textarea id="pix-qr-text" class="pix-code" readonly></textarea>
+             <button id="pix-copy-button" class="cta-button outline">Copiar Código</button>
+             <button id="generate-pix-button" class="cta-button">Gerar PIX</button>
+        </div>
+        
+        <div id="payment-error-message" class="error-message" style="display: none;"></div>
+        <progress value="0" class="progress-bar" style="display: none;">Carregando...</progress>
       </aside>
     </div>
   </main>
@@ -99,8 +90,10 @@
   <%- include('partials/footer') %>
 
   <script>
-    window.__PAGAMENTO__ = <%- JSON.stringify(pagamento || null) %>;
-    window.__PIX_CHAVE__ = "<%= process.env.PIX_CHAVE || 'chave@exemplo.com' %>";
+    window.mpPublicKey = "<%= locals.mercadoPagoPublicKey %>";
+    window.totalAmount = "<%= cart.total.toFixed(2) %>";
+    window.userEmail = "<%= user.email %>";
   </script>
+  <script src="../js/checkout.js" defer></script>
 </body>
 </html>
