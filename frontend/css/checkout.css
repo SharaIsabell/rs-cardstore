@@ -406,3 +406,103 @@
     border-radius: 8px;
     margin-bottom: 20px;
 }
+
+/* --- Estilos do Modal de Feedback --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: var(--color-white);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 450px;
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.show .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #d9534f;
+}
+
+.modal-close {
+    font-size: 2rem;
+    cursor: pointer;
+    color: #aaa;
+}
+
+.modal-body p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.modal-footer .cta-button,
+.modal-footer .cta-button.outline {
+    width: 100%;
+    display: block;
+}
+
+body.dark-mode .modal-content {
+    background-color: var(--color-blue-dark);
+}
+
+body.dark-mode .modal-header {
+    border-bottom-color: #334;
+}
+
+/* --- Estilo para Validação de Campos --- */
+.form-control.invalid,
+.mp-container.invalid {
+    border-color: #d9534f;
+    box-shadow: 0 0 0 3px rgba(217, 83, 79, 0.1);
+}
+
+/* Garante que a div container do MP também seja destacada */
+#form-checkout__cardNumber.invalid,
+#form-checkout__securityCode.invalid,
+#form-checkout__expirationDate.invalid {
+    border: none;
+    outline: none;
+}

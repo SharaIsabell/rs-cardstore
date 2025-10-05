@@ -18,17 +18,14 @@
       <section class="checkout-left">
         <h2 class="section-subtitle">Itens do Pedido</h2>
         <% if (cart && cart.items && cart.items.length) { %>
-          <% cart.items.forEach(item => { %>
-          
-  <div class="ck-item">
+          <% cart.items.forEach(item => { %>                     
+            <div class="ck-item">
               <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
               <div>
                 <div class="ck-name"><%= item.nome %></div>
-                <div class="ck-price">R$ <%= (item.preco * (1 - item.desconto_percentual / 100)).toFixed(2) %> × <%= item.quantidade %></div>
-              
-   </div>
-   
-         </div>
+                <div class="ck-price">R$ <%= (item.preco * (1 - item.desconto_percentual / 100)).toFixed(2) %> × <%= item.quantidade %></div>         
+              </div>
+            </div>
           <% }) %>
         <% } else { %>
           <p>Seu carrinho está vazio.</p>
@@ -54,67 +51,89 @@
 
         <div class="payment-methods">
             <h3 class="section-subtitle">Escolha a forma de pagamento</h3>
-            <div class="payment-options">
-                <label>
-                    <input type="radio" name="paymentMethod" value="card" checked> Cartão de Crédito/Débito
-                </label>
-                <label>
-                    <input type="radio" name="paymentMethod" value="pix"> PIX
-                </label>
+            <div class="payment-options"> 
+              <label>
+                <input type="radio" name="paymentMethod" value="card" checked> Cartão de Crédito/Débito
+              </label>
+              <label>
+                <input type="radio" name="paymentMethod" value="pix"> PIX        
+              </label>
             </div>
         </div>
 
         <div class="card-wrapper"></div>
-        <form id="form-checkout-card" class="payment-form">
-            <div class="form-row">
-                <input type="text" name="number" id="form-checkout__cardNumber" class="form-control" placeholder="Número do Cartão">
-            </div>
-     
-       <div class="form-row">
-                <input type="text" name="name" id="form-checkout__cardholderName" class="form-control" placeholder="Nome do Titular">
-            </div>
-            <div class="grid2">
-                <div class="form-row">
-                    <input type="text" name="expiry" id="form-checkout__expirationDate" class="form-control" placeholder="MM/AA">
-  
+        <form id="form-checkout-card" class="payment-form" novalidate>
+          <div class="form-row">
+            <input type="text" name="number" id="form-checkout__cardNumber" class="form-control" placeholder="Número do Cartão" required>
+          </div>
+
+          <div class="form-row">
+              <input type="text" name="name" id="form-checkout__cardholderName" class="form-control" placeholder="Nome do Titular" required>
+          </div>
+
+          <div class="grid2">
+              <div class="form-row">
+                  <input type="text" name="expiry" id="form-checkout__expirationDate" class="form-control" placeholder="MM/AA" required>
               </div>
-                <div class="form-row">
-                    <input type="text" name="cvc" id="form-checkout__securityCode" class="form-control" placeholder="CVV">
-                </div>
-            </div>
+              <div class="form-row">
+                  <input type="text" name="cvc" id="form-checkout__securityCode" class="form-control" placeholder="CVV" required>
+              </div>
+          </div>
 
-            <div class="form-row">
-   
-             <label for="form-checkout__cardholderEmail">E-mail</label>
-                <input type="email" id="form-checkout__cardholderEmail" name="cardholderEmail" class="form-control" value="<%= user.email %>"/>
-            </div>
-            <div class="grid2">
-                <div class="form-row"><select id="form-checkout__identificationType" class="form-control"></select></div>
-                <div class="form-row"><input type="text" id="form-checkout__identificationNumber" class="form-control" placeholder="Número do documento"/></div>
-            </div>
+          <div class="form-row">
+              <label for="form-checkout__cardholderEmail">E-mail</label>
+              <input type="email" id="form-checkout__cardholderEmail" name="cardholderEmail" class="form-control" value="<%= user.email %>" required/>
+          </div>
 
+          <div class="grid2">
             <div class="form-row">
-                <label for="form-checkout__issuer">Emissor</label>
-                <select id="form-checkout__issuer" class="form-control"></select>
+                <select id="form-checkout__identificationType" class="form-control" required></select>
             </div>
+            <div class="form-row">
+                <input type="text" id="form-checkout__identificationNumber" class="form-control" placeholder="Número do documento" required/>
+            </div>
+          </div>
 
-            <div class="form-row">
-                 <label for="form-checkout__installments">Parcelas</label>
-                 <select id="form-checkout__installments" class="form-control"></select>
-            </div>
-            <button type="submit" id="form-checkout__submit" class="cta-button">Pagar com Cartão</button>
+          <div class="form-row">
+            <label for="form-checkout__issuer">Emissor</label>
+            <select id="form-checkout__issuer" class="form-control" required></select>
+          </div>
+
+          <div class="form-row">
+            <label for="form-checkout__installments">Parcelas</label>
+            <select id="form-checkout__installments" class="form-control" required></select>
+          </div>
+
+          <button type="submit" id="form-checkout__submit" class="cta-button">Pagar com Cartão</button>
         </form>
 
         <div id="payment-pix-container" class="payment-form" style="display: none;">
-             <p>Pague com Pix para confirmar sua compra na hora. O código expira em 30 minutos.</p>
-             <div id="pix-qr-code" class="pix-qr"></div>
-             <textarea id="pix-qr-text" class="pix-code" readonly></textarea>
-             <button id="pix-copy-button" class="cta-button outline">Copiar Código</button>
-             <button id="generate-pix-button" class="cta-button">Gerar PIX</button>
+          <p>Pague com Pix para confirmar sua compra na hora. O código expira em 30 minutos.</p>
+          <div id="pix-qr-code" class="pix-qr"></div>
+          <textarea id="pix-qr-text" class="pix-code" readonly></textarea>
+          <button id="pix-copy-button" class="cta-button outline">Copiar Código</button>
+          <button id="generate-pix-button" class="cta-button">Gerar PIX</button>
         </div>
         
         <div id="payment-error-message" class="error-message" style="display: none;"></div>
-        <progress value="0" class="progress-bar" style="display: none;">Carregando...</progress>
+
+    <progress value="0" class="progress-bar" style="display: none;">Carregando...</progress>
+
+        <div id="payment-feedback-modal" class="modal-overlay" style="display: none;">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="modal-title"></h3>
+              <span class="modal-close">&times;</span>
+            </div>
+            <div class="modal-body">
+              <p id="modal-message"></p>
+            </div>
+            <div class="modal-footer">
+              <button id="modal-retry-button" class="cta-button outline">Tentar Novamente</button>
+              <button id="modal-change-method-button" class="cta-button">Trocar Método</button>
+            </div>
+          </div>
+        </div>
       </aside>
     </div>
   </main>
@@ -126,6 +145,7 @@
     window.totalAmount = "<%= cart.total.toFixed(2) %>";
     window.userEmail = "<%= user.email %>";
   </script>
+  
   <script src="../js/checkout.js" defer></script>
   <script src="/js/theme.js"></script>
 </body>

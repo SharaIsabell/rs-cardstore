@@ -363,7 +363,7 @@ router.post('/process_payment', async (req, res) => {
                 return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
             } else {
                 await connection.rollback();
-                return res.status(400).json({ success: false, message: `Pagamento recusado: ${paymentResult.status_detail}` });
+                return res.status(400).json({ success: false, message: `Pagamento recusado: ${paymentResult.status_detail}`, status: paymentResult.status_detail });
             }
 
         } else if (payment_method === 'pix') {
