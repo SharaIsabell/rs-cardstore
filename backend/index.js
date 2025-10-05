@@ -355,7 +355,7 @@ router.post('/process_payment', async (req, res) => {
             if (paymentResult.status === 'approved') {
                 // Passa o frete para a função createOrder
                 const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete);
-                await createPaymentRecord(connection, pedido_id, payment_method_id.includes('credit') ? 'credito' : 'debito', 'aprovado');
+                await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado');
                 await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
                 
                 delete req.session.frete; // Limpa o frete da sessão

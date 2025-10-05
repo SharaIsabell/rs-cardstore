@@ -13,10 +13,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const cepInput = document.getElementById('cep-input');
     const optionsContainer = document.getElementById('shipping-options-container');
     const shippingError = document.getElementById('shipping-error');
+    const checkoutBtn = document.querySelector('.checkout-btn');
+
+    // --- Desabilita o botão se o CEP for alterado ---
+    if (cepInput && checkoutBtn) {
+        cepInput.addEventListener('input', () => {
+            checkoutBtn.classList.add('disabled');
+        });
+    }
 
     if (calculateBtn) {
         calculateBtn.addEventListener('click', async () => {
             const cep = cepInput.value.replace(/\D/g, '');
+
+            shippingError.textContent = '';
+            optionsContainer.innerHTML = '';
+
+            // Garante que o botão continue desabilitado durante o cálculo
+            checkoutBtn.classList.add('disabled');             
+
+            // --- Validação de campo vazio ---
+            if (!cep) {
+                shippingError.textContent = 'O campo CEP é obrigatório.';
+                return;
+            }
 
             if (cep.length !== 8) {
                 shippingError.textContent = 'Por favor, insira um CEP válido com 8 dígitos.';
@@ -87,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedShipping) return;
 
         const shippingCost = parseFloat(selectedShipping.value);
-        const shippingName = selectedShipping.getAttribute('data-name'); // Pega o nome
+        const shippingName = selectedShipping.getAttribute('data-name'); 
         const subtotalElement = document.getElementById('summary-total');
         const subtotal = parseFloat(subtotalElement.getAttribute('data-subtotal'));
         const total = subtotal + shippingCost;
@@ -98,13 +118,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Envia o frete para o servidor para salvar na sessão ---
         try {
-            await fetch('/carrinho/salvar-frete', {
+            const response = await fetch('/carrinho/salvar-frete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ cost: shippingCost, name: shippingName })
             });
+            
+            if (!response.ok) throw new Error('Falha ao salvar o frete.');
+
+            // --- Habilita o botão de finalizar compra ---
+            if (checkoutBtn) {
+                checkoutBtn.classList.remove('disabled');
+            }
         } catch (error) {
             console.error('Erro ao salvar o frete na sessão:', error);
+            
+            // Garante que o botão permaneça desabilitado em caso de erro
+            if (checkoutBtn) {
+                checkoutBtn.classList.add('disabled');
+            }
         }
     }
 });

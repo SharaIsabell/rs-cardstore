@@ -52,13 +52,13 @@
 
                     <div class="shipping-calculator">
                         <h3>Calcular Frete</h3>
+                        <div id="shipping-error" class="error-message"></div>
                         <div class="shipping-input-group">
-                            <input type="text" id="cep-input" placeholder="Digite seu CEP">
+                            <input type="text" id="cep-input" placeholder="Digite seu CEP" required>
                             <button id="calculate-shipping-btn" class="cta-button-small">Calcular</button>
                         </div>
                         <div id="shipping-options-container">
-                            </div>
-                         <div id="shipping-error" class="error-message"></div>
+                        </div>
                     </div>
                     <div class="summary-row">
                         <span>Frete</span>
@@ -69,7 +69,7 @@
                         <strong id="summary-total" data-subtotal="<%= cart.total.toFixed(2) %>">R$ <%= cart.total.toFixed(2) %></strong>
                     </div>
                     
-                    <a href="/checkout" class="cta-button checkout-btn">Finalizar Compra</a>
+                    <a href="/checkout" class="cta-button checkout-btn disabled">Finalizar Compra</a>
                 </div>
             </div>
         <% } else { %>
