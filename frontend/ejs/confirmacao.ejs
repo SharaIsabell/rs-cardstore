@@ -1,54 +1,101 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido Confirmado - RS Card Store</title>
-    <link rel="stylesheet" href="../css/index.css">
-    <link rel="stylesheet" href="../css/checkout.css">
+    <title>Pedido Confirmado! - RS Card Store</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    
+    <link rel="stylesheet" href="/css/index.css">
+    <link rel="stylesheet" href="/css/checkout.css">
+    
+    <link rel="stylesheet" href="/css/confirmacao.css">
 </head>
 <body>
     <%- include('partials/header') %>
 
+    <div class="confetti-container"></div>
+
     <main class="container section">
         <div class="confirmation-box">
-            <% if (pedido.metodo === 'pix' && pedido.status === 'pendente') { %>
-                <h1 class="section-title">⏳ Pedido Aguardando Pagamento</h1>
-                <p>Seu pedido foi criado! Agora só falta concluir o pagamento do Pix para que ele seja confirmado.</p>
-                <div class="pix-instructions">
-                    <p>Verifique o QR Code ou o código "copia e cola" na página anterior para pagar. O pedido será aprovado automaticamente assim que o pagamento for identificado.</p>
-                </div>
-            <% } else { %>
-                <h1 class="section-title">🎉 Pedido Confirmado!</h1>
-                <p>Obrigado pela sua compra. Seu pagamento foi aprovado e seu pedido já está sendo preparado.</p>
-            <% } %>
+            <div class="confirmation-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h1 class="confirmation-title">Oba! Seu pedido foi confirmado!</h1>
+            <p class="confirmation-subtitle">
+                Recebemos seu pedido #<%= pedido.id %> e já estamos preparando tudo. <br>
+                Você receberá as atualizações por e-mail.
+            </p>
 
-            <div class="order-summary">
-                <h2>Resumo do Pedido #<%= pedido.id %></h2>
-                <p><strong>Data:</strong> <%= pedido.data_pedido %></p>
-                
-                <div class="order-items-list">
+            <a href="/magic" class="cta-button">Continuar Comprando</a>
+        </div>
+
+        <div class="order-details-grid">
+            <div class="tracking-section">
+                <h2 class="section-subtitle">Acompanhamento do Pedido</h2>
+                <div class="tracking-timeline">
+                    <div class="timeline-item active">
+                        <div class="timeline-icon"><i class="fas fa-receipt"></i></div>
+                        <div class="timeline-content">
+                            <strong>Pedido Realizado</strong>
+                            <span><%= pedido.data_pedido %></span>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon"><i class="fas fa-credit-card"></i></div>
+                        <div class="timeline-content">
+                            <strong>Pagamento Aprovado</strong>
+                            <span>Aguardando...</span>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon"><i class="fas fa-box-open"></i></div>
+                        <div class="timeline-content">
+                            <strong>Em Separação</strong>
+                            <span>Aguardando...</span>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-icon"><i class="fas fa-truck"></i></div>
+                        <div class="timeline-content">
+                            <strong>Pedido Enviado</strong>
+                            <span>Aguardando...</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="tracking-notice">
+                    Esta seção será atualizada conforme seu pedido avança. Fique de olho!
+                </p>
+            </div>
+
+            <aside class="summary">
+                <h2 class="section-subtitle">Resumo da Compra</h2>
+                <% if (itens && itens.length) { %>
                     <% itens.forEach(item => { %>
                         <div class="ck-item">
                             <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
                             <div>
                                 <div class="ck-name"><%= item.nome %></div>
-                                <div class="ck-price">R$ <%= Number(item.preco_unitario).toFixed(2) %> × <%= item.quantidade %></div>
+                                <div class="ck-price">R$ <%= parseFloat(item.preco_unitario).toFixed(2) %> × <%= item.quantidade %></div>
                             </div>
                         </div>
                     <% }) %>
-                </div>
-
+                <% } %>
                 <div class="summary-total">
-                    <span>Total</span>
-                    <strong>R$ <%= Number(pedido.total).toFixed(2) %></strong>
+                    <span>Total Pago (<%= pedido.metodo %>)</span>                    
+                    <strong>R$ <%= parseFloat(pedido.total).toFixed(2) %></strong>
                 </div>
-            </div>
-
-            <a href="/" class="cta-button">Voltar para a Loja</a>
+            </aside>
         </div>
     </main>
 
     <%- include('partials/footer') %>
+    
+    <script src="/js/confetti.js"></script>
+    <script src="/js/theme.js"></script>
 </body>
 </html>

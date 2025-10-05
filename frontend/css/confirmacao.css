@@ -1,0 +1,192 @@
+/* --- Animação de Confete --- */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #f00;
+    opacity: 0.9;
+    border-radius: 50%;
+    animation: fall 5s linear forwards;
+}
+
+@keyframes fall {
+    0% {
+        transform: translateY(-10vh) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(110vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* --- Caixa de Confirmação --- */
+.confirmation-box {
+    background-color: var(--color-gray-light);
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeInScale 0.8s ease-out forwards;
+    transform: scale(0.9);
+    opacity: 0;
+}
+
+@keyframes fadeInScale {
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.confirmation-icon {
+    font-size: 5rem;
+    color: #2ecc71; /* Verde sucesso */
+    line-height: 1;
+    animation: iconPop 0.5s 0.5s ease-out backwards;
+}
+
+@keyframes iconPop {
+    0% { transform: scale(0.5); }
+    80% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.confirmation-title {
+    font-family: var(--font-heading);
+    font-size: 2.8rem;
+    color: var(--color-blue-dark);
+    margin: 1.5rem 0 0.5rem;
+}
+
+.confirmation-subtitle {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+/* --- Grid do Detalhe do Pedido --- */
+.order-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    align-items: flex-start;
+}
+
+/* --- Seção de Acompanhamento --- */
+.tracking-section {
+    background-color: var(--color-gray-light);
+    padding: 2rem;
+    border-radius: 15px;
+}
+
+.tracking-section .section-subtitle {
+    text-align: left;
+    margin-bottom: 2rem;
+}
+
+.tracking-timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+/* Linha vertical da timeline */
+.tracking-timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    background-color: #ddd;
+    border-radius: 3px;
+}
+
+body.dark-mode .tracking-timeline::before {
+    background-color: #334;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    position: relative;
+}
+
+.timeline-icon {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background-color: #ddd;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-left: -58px;
+    border: 3px solid var(--color-gray-light);
+    z-index: 2;
+    transition: all 0.4s ease;
+}
+
+body.dark-mode .timeline-icon {
+    border-color: var(--color-gray-light);
+    background-color: #334;
+}
+
+.timeline-content {
+    color: #999;
+}
+
+.timeline-content strong {
+    display: block;
+    font-weight: 700;
+}
+
+/* Estilos para item ATIVO */
+.timeline-item.active .timeline-icon {
+    background-color: var(--color-orange-vibrant);
+    color: var(--color-white);
+}
+
+.timeline-item.active .timeline-content {
+    color: var(--color-text);
+}
+
+.tracking-notice {
+    margin-top: 1.5rem;
+    font-size: 0.9rem;
+    color: #777;
+    text-align: center;
+}
+
+/* --- Responsividade --- */
+@media (max-width: 992px) {
+    .order-details-grid {
+        grid-template-columns: 1fr;
+    }
+    .tracking-section {
+        order: 1;
+    }
+    .summary {
+        order: 2;
+    }
+}
+
+@media (max-width: 768px) {
+    .confirmation-title {
+        font-size: 2.2rem;
+    }
+}
