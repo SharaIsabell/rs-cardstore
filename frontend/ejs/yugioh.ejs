@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Magic: The Gathering - RS Card Store</title>
+    <title>Yu-Gi-Oh! - RS Card Store</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="../css/yugioh.css">
 </head>
 <body class="yugioh-page">
-     <%- include('partials/header') %>
+    <%- include('partials/header') %>
 
     <main>
         <section class="hero">
@@ -76,8 +76,9 @@
                             </div>
                             <div>
                                 <h4><%= p.nome %></h4>
+                                <%# --- ATUALIZAÇÃO: Lógica de desconto adicionada --- %>
                                 <div class="product-price">
-                                <% if (p.desconto_percentual > 0) { %>
+                                    <% if (p.desconto_percentual > 0) { %>
                                         <% 
                                         const precoOriginal = p.preco;
                                         const precoFinal = precoOriginal * (1 - p.desconto_percentual / 100);
@@ -94,8 +95,11 @@
                                 </div>
                             </div>
                             </a>
-
-                            <a href="/carrinho/adicionar/<%= p.id %>" class="cta-button">Adicionar ao Carrinho</a>
+                            
+                            <form action="/carrinho/adicionar/<%= p.id %>" method="POST" style="display: inline;">
+                                <input type="hidden" name="quantidade" value="1">
+                                <button type="submit" class="cta-button">Adicionar ao Carrinho</button>
+                            </form>
                         </div>
                         <% }) %>
                     <% } else { %>
@@ -120,6 +124,7 @@
     </main>
     
     <%- include('partials/footer') %>
+
     <script src="/js/theme.js"></script>
 
 </body>

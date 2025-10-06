@@ -19,40 +19,45 @@
     <main class="product-detail-page">
         <div class="container">
           
-  <div class="product-content-grid">
-                
+            <div class="product-content-grid">
+                        
                 <div class="product-image-gallery">
-                    <img src="<%= produto.imagem_url ||
-'https://via.placeholder.com/600x600?text=' + produto.categoria %>" alt="<%= produto.nome %>" class="main-product-image">
+                    <img src="<%= produto.imagem_url || 'https://via.placeholder.com/600x600?text=' + produto.categoria %>" alt="<%= produto.nome %>" class="main-product-image">
                 </div>
 
                 <div class="product-info">
                     <h1 class="product-title"><%= produto.nome %></h1>
-                    
-                 
-   <div class="product-price-main">
-                        R$ <%= Number(produto.preco).toFixed(2).replace('.', ',') %>
+                            
+                        
+                    <div class="product-price-container">
+                        <% if (produto.desconto_percentual > 0) { %>
+                            <% 
+                                const precoOriginal = produto.preco;
+                                const precoFinal = precoOriginal * (1 - produto.desconto_percentual / 100);
+                            %>
+                            <span class="original-price">R$ <%= Number(precoOriginal).toFixed(2).replace('.', ',') %></span>
+                            <span class="final-price">R$ <%= Number(precoFinal).toFixed(2).replace('.', ',') %></span>
+                            <span class="discount-badge"><%= Math.round(produto.desconto_percentual) %>% OFF</span>
+                        <% } else { %>
+                            <span class="final-price">R$ <%= Number(produto.preco).toFixed(2).replace('.', ',') %></span>
+                        <% } %>
                     </div>
 
                     <div class="product-meta">
-                        <span class="meta-item"><strong>Categoria:</strong> <%= 
-produto.categoria %></span>
+                        <span class="meta-item"><strong>Categoria:</strong> <%= produto.categoria %></span>
                         <span class="meta-item">
                             <strong>Disponibilidade:</strong> 
-                            <span class="<%= produto.estoque > 0 ?
-'status-available' : 'status-unavailable' %>">
+                            <span class="<%= produto.estoque > 0 ? 'status-available' : 'status-unavailable' %>">
                                 <%= produto.estoque > 0 ? 'Em estoque' : 'Indisponível' %>
                             </span>
                         </span>
-    
-                </div>
-                    
+                    </div>
                     <form action="/carrinho/adicionar/<%= produto.id %>" method="POST" class="product-actions">
                         <% if (produto.estoque > 0) { %>
                             <div class="quantity-selector">
                                 <label for="quantity">Quantidade:</label>
-         
-                       <input type="number" id="quantity" name="quantity" value="1" min="1" max="<%= produto.estoque %>">
+            
+                        <input type="number" id="quantity" name="quantity" value="1" min="1" max="<%= produto.estoque %>">
                             </div>
                             <button type="submit" class="cta-button add-to-cart-btn">Adicionar ao Carrinho</button>
                         <% } else { %>
@@ -61,24 +66,20 @@ produto.categoria %></span>
                                 <input type="number" id="quantity" name="quantity" value="0" min="0" max="0" disabled>
                             </div>
                             <button type="button" class="cta-button add-to-cart-btn" disabled>Produto Indisponível</button>
-                        <% } %>
-                  
-  </form>
+                        <% } %>     
+                    </form>
                     <div class="product-description-section">
                         <h2 class="section-title">Descrição</h2>
                         <p class="product-description">
-                           
- <%= produto.descricao || 'Descrição do produto não disponível.' %>
+                            <%= produto.descricao || 'Descrição do produto não disponível.' %>
                         </p>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-    
-   
- <%- include('partials/footer') %>
+<%- include('partials/footer') %>
 
-    <script src="/js/theme.js"></script>
+<script src="/js/theme.js"></script>
 </body>
 </html>

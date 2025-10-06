@@ -121,13 +121,13 @@ body {
     top: 10px;
     left: 0;
     font-size: 1rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--color-orange-vibrant);
     pointer-events: none;
     transition: 0.3s ease all;
 }
 
 .input-group input:focus ~ label,
-.input-group input:valid ~ label {
+.input-group input:not(:placeholder-shown) ~ label {
     top: -20px;
     font-size: 0.8rem;
     color: var(--color-orange-vibrant);
@@ -326,6 +326,17 @@ body {
     border: 1px solid #c3e6cb;
     text-align: center;
     font-size: 0.9rem;
+}
+
+.error-message {
+  background-color: #ffdddd;
+  border: 1px solid #f44336;
+  color: #f44336;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 35px;
+  text-align: center;
+  font-size: 0.9em;
 }
 
 /* --- Responsividade --- */

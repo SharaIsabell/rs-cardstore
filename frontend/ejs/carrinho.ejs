@@ -24,7 +24,21 @@
                             </div>
                             <div class="item-details">
                                 <h3 class="item-name"><%= item.nome %></h3>
-                                <p class="item-price">R$ <%= Number(item.preco).toFixed(2) %></p>
+                                <% 
+                                    const precoOriginal = item.preco;
+                                    let precoFinal = precoOriginal;
+                                    if (item.desconto_percentual > 0) {
+                                        precoFinal = precoOriginal * (1 - item.desconto_percentual / 100);
+                                    }
+                                %>
+                                <div class="item-price">
+                                    <% if (item.desconto_percentual > 0) { %>
+                                        <span class="original-price">R$ <%= Number(precoOriginal).toFixed(2) %></span>
+                                        <span class="final-price">R$ <%= Number(precoFinal).toFixed(2) %></span>
+                                    <% } else { %>
+                                        <span class="final-price">R$ <%= Number(precoFinal).toFixed(2) %></span>
+                                    <% } %>
+                                </div>
                             </div>
                             <div class="item-quantity">
                                 <form action="/carrinho/atualizar/<%= item.produto_id %>" method="POST">
@@ -32,7 +46,7 @@
                                 </form>
                             </div>
                             <div class="item-subtotal">
-                                <strong>R$ <span class="subtotal-value"><%= (Number(item.preco) * item.quantidade).toFixed(2) %></span></strong>
+                                <strong>R$ <span class="subtotal-value"><%= (Number(precoFinal) * item.quantidade).toFixed(2) %></span></strong>  
                             </div>
                             <div class="item-remove">
                                 <form action="/carrinho/remover/<%= item.produto_id %>" method="POST">

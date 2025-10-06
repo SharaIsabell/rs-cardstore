@@ -89,7 +89,6 @@
     font-size: 1.1rem;
 }
 
-
 .summary-total {
     margin-top: 30px;
     padding-top: 20px;
@@ -206,6 +205,24 @@
     margin-top: 10px;
     margin-bottom: 10px; 
     margin-top: 0;
+}
+
+.item-price {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-price .final-price {
+    font-size: 1.1rem;
+    color: var(--color-text);
+    font-weight: bold;
+}
+
+.item-price .original-price {
+    font-size: 0.9rem;
+    color: #888;
+    text-decoration: line-through;
 }
 
 @media (max-width: 992px) {

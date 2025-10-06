@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="../css/magic.css">
 </head>
 <body class="magic-page">
-     <%- include('partials/header') %>
+    <%- include('partials/header') %>
 
     <main>
         <section class="hero">
@@ -78,7 +78,7 @@
                             <div>
                                 <h4><%= p.nome %></h4>
                                 <div class="product-price">
-                                <% if (p.desconto_percentual > 0) { %>
+                                    <% if (p.desconto_percentual > 0) { %>
                                         <% 
                                         const precoOriginal = p.preco;
                                         const precoFinal = precoOriginal * (1 - p.desconto_percentual / 100);
@@ -95,8 +95,11 @@
                                 </div>
                             </div>
                             </a>
-                            
-                            <a href="/carrinho/adicionar/<%= p.id %>" class="cta-button">Adicionar ao Carrinho</a>
+
+                            <form action="/carrinho/adicionar/<%= p.id %>" method="POST" style="display: inline;">
+                                <input type="hidden" name="quantidade" value="1">
+                                <button type="submit" class="cta-button">Adicionar ao Carrinho</button>
+                            </form>
                         </div>
                         <% }) %>
                     <% } else { %>

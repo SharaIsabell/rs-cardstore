@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="../css/promocoes.css">
 </head>
 <body>
-     <%- include('partials/header') %>
+    <%- include('partials/header') %>
 
     <main>
         <section class="hero">
@@ -89,7 +89,9 @@
                                 </div>
                             </div>
                             </a>
-                            <a href="/carrinho/adicionar/208" class="cta-button">Adicionar ao Carrinho</a>
+                            <form action="/carrinho/adicionar/<%= produto.id %>" method="POST" style="display: inline;">
+                            <input type="hidden" name="quantidade" value="1">
+                            <button type="submit" class="cta-button">Adicionar ao Carrinho</button>
                             </form>
                         </div>
                         <% }) %>
@@ -97,7 +99,6 @@
                         <p>Nenhuma promoção ativa no momento.</p>
                     <% } %>
                 </div>
-
 
                 <nav class="pagination" aria-label="Navegação de página de produtos">
                     <ul>
@@ -113,6 +114,7 @@
     </main>
     
     <%- include('partials/footer') %>
+
     <script src="/js/theme.js"></script>
 </body>
 </html>

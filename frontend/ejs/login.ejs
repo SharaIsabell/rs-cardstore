@@ -21,6 +21,13 @@
                         <%= message %>
                     </div>
                 <% } %>
+
+                 <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+                    <div class="error-message">
+                        <%= errorMessage %>
+                    </div>
+                <% } %>
+
                 <form action="/login" method="POST">
                     <div class="input-group">
                         <input type="email" id="loginEmail" name="email" required>
@@ -42,27 +49,27 @@
                 <p>Junte-se a nós e comece a jogar.</p>
                 <form action="/register" method="POST">
                     <div class="input-group">
-                        <input type="text" id="registerName" name="nome" required>
+                        <input type="text" id="registerName" name="nome" required placeholder=" ">
                         <label for="registerName">Nome Completo</label>
                     </div>
                     <div class="input-group">
-                        <input type="email" id="registerEmail" name="email" required>
+                        <input type="email" id="registerEmail" name="email" required placeholder=" ">
                         <label for="registerEmail">Email</label>
                     </div>
                      <div class="input-group">
-                        <input type="tel" id="registerTelefone" name="telefone" required>
+                        <input type="tel" id="registerTelefone" name="telefone" required minlength="11" maxlength="11" pattern="[0-9]{11}" title="O telefone deve conter exatamente 11 dígitos." oninput="this.value = this.value.replace(/\D/g, '')" placeholder=" ">
                         <label for="registerTelefone">Telefone</label>
                     </div>
                      <div class="input-group">
-                        <input type="text" id="registerEndereco" name="endereco" required>
+                        <input type="text" id="registerEndereco" name="endereco" required placeholder=" ">
                         <label for="registerEndereco">Endereço</label>
                     </div>
                     <div class="input-group">
-                        <input type="password" id="registerPassword" name="senha" required minlength="8">
+                        <input type="password" id="registerPassword" name="senha" required minlength="8" placeholder=" ">
                         <label for="registerPassword">Senha</label>
                     </div>
                     <div class="input-group">
-                        <input type="password" id="confirmPassword" name="confirmSenha" required>
+                        <input type="password" id="confirmPassword" name="confirmSenha" required placeholder=" ">
                         <label for="confirmPassword">Confirmar Senha</label>
                     </div>
                     <button type="submit" class="cta-button">Cadastrar</button>

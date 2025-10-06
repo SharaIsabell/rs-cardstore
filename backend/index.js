@@ -162,7 +162,7 @@ router.get('/login', (req, res) => {
     if (req.query.status === 'verificado') {
         message = 'E-mail verificado com sucesso! Você já pode fazer o login.';
     }
-    res.render('login', { message });
+    res.render('login', { message: message, errorMessage: null });
 });
 
 router.post('/register', async (req, res) => {
@@ -173,6 +173,12 @@ router.post('/register', async (req, res) => {
   if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
       return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
   }
+  
+  const telefoneNumerico = telefone.replace(/\D/g, ''); // Remove caracteres não numéricos
+  if (telefoneNumerico.length !== 11) {
+    return res.status(400).send('O telefone deve conter no mínimo 11 dígitos numéricos.');
+  }
+
   try {
     const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser.length > 0) {
@@ -184,7 +190,7 @@ router.post('/register', async (req, res) => {
     const token_verificacao_expira = new Date(Date.now() + 5 * 60 * 1000);
     await db.query(
       'INSERT INTO users (nome, email, telefone, endereco, senha_hash, token_verificacao, token_verificacao_expira) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [nome, email, telefone, endereco, senha_hash, token_verificacao, token_verificacao_expira]
+      [nome, email, telefoneNumerico, endereco, senha_hash, token_verificacao, token_verificacao_expira]
     );
     await enviarEmailVerificacao(email, token_verificacao);
     res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
@@ -224,22 +230,38 @@ router.post('/login', async (req, res) => {
     const { email, senha } = req.body;
     const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     if (users.length === 0) {
-      return res.status(401).send('E-mail ou senha inválidos.');
+      return res.status(401).render('login', { 
+        message: null, 
+        errorMessage: 'E-mail ou senha inválidos.' 
+      });
     }
     const user = users[0];
-    if (!user.email_verificado) {
-        return res.status(403).send('Por favor, verifique seu e-mail antes de fazer o login.');
-    }
     const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
     if (!senhaCorreta) {
-      return res.status(401).send('E-mail ou senha inválidos.');
+      return res.status(401).render('login', { 
+        message: null, 
+        errorMessage: 'E-mail ou senha inválidos.' 
+      });
     }
+    
+    // Se o e-mail ainda não foi verificado
+    if (!user.email_verificado) {
+        return res.status(403).render('login', { 
+          message: null, 
+          errorMessage: 'Por favor, verifique seu e-mail antes de fazer o login.' 
+        });
+    }
+
+    // Se tudo estiver correto, cria a sessão e redireciona
     req.session.userId = user.id;
     req.session.userName = user.nome;
     res.redirect('/');
   } catch (error) {
     console.error('ERRO DETALHADO AO FAZER LOGIN:', error);
-    res.status(500).send('Ocorreu um erro no servidor ao tentar fazer login.');
+    res.status(500).render('login', { 
+      message: null, 
+      errorMessage: 'Ocorreu um erro no servidor ao tentar fazer login.' 
+    });
   }
 });
 
@@ -480,12 +502,15 @@ router.get('/carrinho', async (req, res) => {
         }
         const carrinho_id = cart[0].id;
         const [items] = await db.query(
-            `SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.imagem_url 
+            `SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.imagem_url, p.desconto_percentual  
              FROM carrinho_itens ci JOIN produtos p ON ci.produto_id = p.id 
              WHERE ci.carrinho_id = ?`,
             [carrinho_id]
         );
-        const total = items.reduce((acc, item) => acc + (item.preco * item.quantidade), 0);
+        const total = items.reduce((acc, item) => {
+            const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
+            return acc + (precoFinal * item.quantidade);
+        }, 0);
         res.render('carrinho', { cart: { items, total } });
     } catch (error) {
         console.error('Erro ao buscar carrinho:', error);
@@ -498,7 +523,7 @@ router.post('/carrinho/adicionar/:id', async (req, res) => {
         return res.redirect('/login');
     }
     const produto_id = req.params.id;
-    const quantidade = parseInt(req.body.quantidade) || 1;
+    const quantidade = parseInt(req.body.quantity) || 1;
     const user_id = req.session.userId;
     try {
         let [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);

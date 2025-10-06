@@ -14,6 +14,7 @@
 </head>
 <body class="acessorios-page">
   <%- include('partials/header') %>
+
   <main>
     <section class="hero" style="--gradient-start: rgba(10,36,99,0.95); --gradient-end: rgba(255,159,28,0.95);">
       <div class="floating-cards" aria-hidden="true">
@@ -86,7 +87,6 @@
                     <div class="product-price">
                       <% if (produto.desconto_percentual > 0) { %>
                         <% 
-                          // Calcula o preço final
                           const precoOriginal = produto.preco;
                           const precoFinal = precoOriginal * (1 - produto.desconto_percentual / 100);
                         %>
