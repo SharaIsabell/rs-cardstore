@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const mp = new MercadoPago(mpPublicKey);
 
-    // --- Lógica para o Cartão Animado ---
     new Card({
         form: '#form-checkout-card',
         container: '.card-wrapper',
@@ -148,9 +147,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Controla a visibilidade dos botões com base no tipo de erro
         if (isValidationError) {
             modalRetryButton.textContent = 'OK, Corrigir';
-            modalChangeMethodButton.style.display = 'none';
+            modalChangeMethodButton.style.display = 'none'; 
         } else {
-            modalRetryButton.textContent = 'Tentar Novamente';
+            modalRetryButton.textContent = 'Tentar Novamente'; 
             modalChangeMethodButton.style.display = 'block';
         }
 
@@ -203,7 +202,6 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessageContainer.style.display = 'none';
     };
 
-    // Inicializa o formulário de cartão de crédito/débito
     const initializeCardForm = async () => {
         if (cardForm) {
             cardForm.unmount();
@@ -233,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 onSubmit: event => {
                     event.preventDefault();
 
-                    // --- Chama a validação antes de tudo ---
                     if (!validateCardForm()) {
                         return; // Para a execução se a validação falhar
                     }
@@ -327,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (data.status === 'pago') {
-                    clearInterval(pollingInterval); // Para a verificação
+                    clearInterval(pollingInterval);
                     window.location.href = `/pedido/confirmacao/${orderId}`;
                 }
             } catch (error) {
@@ -336,7 +333,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 5000); // Verifica a cada 5 segundos
     }
 
-    // Copia o código PIX
     pixCopyButton.addEventListener('click', () => {
         pixQrTextContainer.select();
         document.execCommand('copy');
@@ -344,11 +340,9 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { pixCopyButton.textContent = 'Copiar Código'; }, 2000);
     });
 
-    // Adiciona os listeners
     paymentMethodRadios.forEach(radio => radio.addEventListener('change', handlePaymentMethodChange));
     generatePixButton.addEventListener('click', handleGeneratePix);
 
-    // Inicialização
     handlePaymentMethodChange();
     initializeCardForm();
 });

@@ -91,10 +91,6 @@ async function main() {
       FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
     );
 
-    ALTER TABLE pagamentos MODIFY COLUMN status ENUM('aprovado', 'recusado', 'pendente');
-
-    ALTER TABLE pagamentos ADD COLUMN mp_payment_id VARCHAR(255);
-
     CREATE TABLE IF NOT EXISTS fidelidade (
       id INT AUTO_INCREMENT PRIMARY KEY,
       user_id INT,
@@ -110,6 +106,53 @@ async function main() {
       FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
     );
   `);
+
+  const colunasEnderecoUsers = [
+    { nome: 'cep', tipo: 'VARCHAR(9) NULL' }, { nome: 'logradouro', tipo: 'VARCHAR(255) NULL' },
+    { nome: 'numero', tipo: 'VARCHAR(20) NULL' }, { nome: 'complemento', tipo: 'VARCHAR(100) NULL' },
+    { nome: 'bairro', tipo: 'VARCHAR(100) NULL' }, { nome: 'cidade', tipo: 'VARCHAR(100) NULL' },
+    { nome: 'estado', tipo: 'VARCHAR(2) NULL' }
+  ];
+  for (const coluna of colunasEnderecoUsers) {
+    try {
+      await connection.query(`ALTER TABLE users ADD COLUMN ${coluna.nome} ${coluna.tipo};`);
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME') console.warn(`Aviso em 'users':`, error.message);
+    }
+  }
+
+  const colunasEnderecoPedidos = [
+    { nome: 'endereco_cep', tipo: 'VARCHAR(9) NULL' }, { nome: 'endereco_rua', tipo: 'VARCHAR(255) NULL' },
+    { nome: 'endereco_numero', tipo: 'VARCHAR(50) NULL' }, { nome: 'endereco_complemento', tipo: 'VARCHAR(100) NULL' },
+    { nome: 'endereco_bairro', tipo: 'VARCHAR(100) NULL' }, { nome: 'endereco_cidade', tipo: 'VARCHAR(100) NULL' },
+    { nome: 'endereco_estado', tipo: 'VARCHAR(2) NULL' }
+  ];
+  for (const coluna of colunasEnderecoPedidos) {
+    try {
+      await connection.query(`ALTER TABLE pedidos ADD COLUMN ${coluna.nome} ${coluna.tipo};`);
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME') console.warn(`Aviso em 'pedidos':`, error.message);
+    }
+  }
+  
+  try {
+    await connection.query("ALTER TABLE users DROP COLUMN endereco;");
+    console.log("Coluna 'endereco' removida de 'users' com sucesso.");
+  } catch (error) {
+    if (error.code !== 'ER_CANT_DROP_FIELD_OR_KEY') {
+      console.warn("Aviso ao tentar remover a coluna 'endereco':", error.message);
+    }
+  }
+
+  // --- ALTERAÇÕES NA TABELA PAGAMENTOS ---
+  try {
+      await connection.query("ALTER TABLE pagamentos MODIFY COLUMN status ENUM('aprovado', 'recusado', 'pendente');");
+      await connection.query("ALTER TABLE pagamentos ADD COLUMN mp_payment_id VARCHAR(255);");
+    } catch (error) {
+      if (error.code !== 'ER_DUP_FIELDNAME' && error.code !== 'ER_DUP_COLUMN_NAME') {
+        console.warn("Aviso ao rodar ALTER TABLE:", error.message);
+      }
+  }
 
   console.log("Banco de dados e tabelas criados com sucesso!");
   await connection.end();

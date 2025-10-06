@@ -16,6 +16,7 @@
 
         <% if (cart && cart.items && cart.items.length > 0) { %>
             <div class="cart-container">
+
                 <div class="cart-items">
                     <% cart.items.forEach(item => { %>
                         <div class="cart-item" data-item-id="<%= item.produto_id %>">
@@ -46,7 +47,7 @@
                                 </form>
                             </div>
                             <div class="item-subtotal">
-                                <strong>R$ <span class="subtotal-value"><%= (Number(precoFinal) * item.quantidade).toFixed(2) %></span></strong>  
+                                <strong>R$ <span class="subtotal-value"><%= (Number(precoFinal) * item.quantidade).toFixed(2) %></span></strong>
                             </div>
                             <div class="item-remove">
                                 <form action="/carrinho/remover/<%= item.produto_id %>" method="POST">
@@ -65,15 +66,33 @@
                     </div>
 
                     <div class="shipping-calculator">
-                        <h3>Calcular Frete</h3>
+                        <h3>Endereço de Entrega</h3>
+                        <div id="address-options">
+                            <button id="use-registered-address-btn" class="cta-button-small outline">Usar Endereço Cadastrado</button>
+                            <button id="use-new-address-btn" class="cta-button-small outline">Novo Endereço</button>
+                        </div>
+
+                        <div id="address-form-container" style="display: none;">
+                            <div class="shipping-input-group">
+                                <input type="text" id="cep-input" placeholder="Digite seu CEP" required>
+                            </div>
+                            <input type="text" id="rua-input" placeholder="Rua" readonly>
+                            <div class="address-grid">
+                                <input type="text" id="numero-input" placeholder="Número">
+                                <input type="text" id="complemento-input" placeholder="Complemento">
+                            </div>
+                            <input type="text" id="bairro-input" placeholder="Bairro" readonly>
+                            <div class="address-grid">
+                                <input type="text" id="cidade-input" placeholder="Cidade" readonly>
+                                <input type="text" id="estado-input" placeholder="UF" readonly>
+                            </div>
+                            <button id="calculate-shipping-btn" class="cta-button-small">Calcular Frete</button>
+                        </div>
+                        
                         <div id="shipping-error" class="error-message"></div>
-                        <div class="shipping-input-group">
-                            <input type="text" id="cep-input" placeholder="Digite seu CEP" required>
-                            <button id="calculate-shipping-btn" class="cta-button-small">Calcular</button>
-                        </div>
-                        <div id="shipping-options-container">
-                        </div>
+                        <div id="shipping-options-container"></div>
                     </div>
+                    
                     <div class="summary-row">
                         <span>Frete</span>
                         <strong id="summary-shipping">R$ 0.00</strong>
@@ -82,7 +101,6 @@
                         <span>Total</span>
                         <strong id="summary-total" data-subtotal="<%= cart.total.toFixed(2) %>">R$ <%= cart.total.toFixed(2) %></strong>
                     </div>
-                    
                     <a href="/checkout" class="cta-button checkout-btn disabled">Finalizar Compra</a>
                 </div>
             </div>

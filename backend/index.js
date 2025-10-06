@@ -165,18 +165,19 @@ router.get('/login', (req, res) => {
     res.render('login', { message: message, errorMessage: null });
 });
 
+// ROTA DE REGISTRO MODIFICADA
 router.post('/register', async (req, res) => {
-  const { nome, email, telefone, endereco, senha, confirmSenha } = req.body;
+  const { nome, email, telefone, senha, confirmSenha } = req.body;
+  
   if (senha !== confirmSenha) {
     return res.status(400).send('As senhas não coincidem.');
   }
   if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
       return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
   }
-  
-  const telefoneNumerico = telefone.replace(/\D/g, ''); // Remove caracteres não numéricos
-  if (telefoneNumerico.length !== 11) {
-    return res.status(400).send('O telefone deve conter no mínimo 11 dígitos numéricos.');
+  const telefoneNumerico = telefone.replace(/\D/g, '');
+  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) { // Ajuste para 10 ou 11 dígitos
+    return res.status(400).send('O telefone deve conter 10 ou 11 dígitos numéricos.');
   }
 
   try {
@@ -188,10 +189,12 @@ router.post('/register', async (req, res) => {
     const senha_hash = await bcrypt.hash(senha, salt);
     const token_verificacao = crypto.randomBytes(32).toString('hex');
     const token_verificacao_expira = new Date(Date.now() + 5 * 60 * 1000);
+    
     await db.query(
-      'INSERT INTO users (nome, email, telefone, endereco, senha_hash, token_verificacao, token_verificacao_expira) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [nome, email, telefoneNumerico, endereco, senha_hash, token_verificacao, token_verificacao_expira]
+      'INSERT INTO users (nome, email, telefone, senha_hash, token_verificacao, token_verificacao_expira) VALUES (?, ?, ?, ?, ?, ?)',
+      [nome, email, telefoneNumerico, senha_hash, token_verificacao, token_verificacao_expira]
     );
+
     await enviarEmailVerificacao(email, token_verificacao);
     res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
   } catch (error) {
@@ -229,21 +232,25 @@ router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
     const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+
+    // Se o usuário não existe ou a senha está incorreta
     if (users.length === 0) {
       return res.status(401).render('login', { 
         message: null, 
         errorMessage: 'E-mail ou senha inválidos.' 
       });
     }
+
     const user = users[0];
     const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
+
     if (!senhaCorreta) {
       return res.status(401).render('login', { 
         message: null, 
         errorMessage: 'E-mail ou senha inválidos.' 
       });
     }
-    
+
     // Se o e-mail ainda não foi verificado
     if (!user.email_verificado) {
         return res.status(403).render('login', { 
@@ -256,6 +263,7 @@ router.post('/login', async (req, res) => {
     req.session.userId = user.id;
     req.session.userName = user.nome;
     res.redirect('/');
+    
   } catch (error) {
     console.error('ERRO DETALHADO AO FAZER LOGIN:', error);
     res.status(500).render('login', { 
@@ -274,47 +282,81 @@ router.get('/logout', (req, res) => {
     });
 });
 
+// --- Buscar endereço do usuário ---
+router.get('/api/get-address', async (req, res) => {
+    if (!req.session.userId) {
+        return res.status(401).json({ success: false, message: 'Não autenticado.' });
+    }
+    try {
+        const [users] = await db.query(
+            'SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM users WHERE id = ?', 
+            [req.session.userId]
+        );
+
+        if (users.length > 0 && users[0].cep) {
+            // Monta um objeto de endereço para enviar ao front-end
+            const address = {
+                cep: users[0].cep,
+                rua: users[0].logradouro,
+                numero: users[0].numero,
+                complemento: users[0].complemento,
+                bairro: users[0].bairro,
+                cidade: users[0].cidade,
+                estado: users[0].estado,
+            };
+
+            res.json({ success: true, address: JSON.stringify(address) });
+        } else {
+            res.json({ success: false, message: 'Nenhum endereço cadastrado.' });
+        }
+    } catch (error) {
+        console.error('Erro ao buscar endereço:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor.' });
+    }
+});
+
 router.get('/checkout', async (req, res) => {
     if (!req.session.userId) {
-        if (req.session.frete) delete req.session.frete;
         return res.redirect('/login');
+    }
+    // Verifica se o endereço e o frete foram definidos
+    if (!req.session.frete || !req.session.endereco_entrega) {
+        console.log("Frete ou endereço não definidos, redirecionando para o carrinho.");
+        return res.redirect('/carrinho');
     }
 
     try {
         const [userRows] = await db.query('SELECT nome, email FROM users WHERE id = ?', [req.session.userId]);
-        if (userRows.length === 0) {
-            return res.redirect('/login');
-        }
+        if (userRows.length === 0) return res.redirect('/login');
+        
         const user = userRows[0];
 
         const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [req.session.userId]);
-        if (cart.length === 0) {
-            return res.render('carrinho', { cart: null });
-        }
+        if (cart.length === 0) return res.render('carrinho', { cart: null });
 
         const carrinho_id = cart[0].id;
         const [items] = await db.query(`
             SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.imagem_url, p.desconto_percentual
-            FROM carrinho_itens ci
-            JOIN produtos p ON ci.produto_id = p.id
+            FROM carrinho_itens ci JOIN produtos p ON ci.produto_id = p.id
             WHERE ci.carrinho_id = ?`, [carrinho_id]
         );
 
-        if (items.length === 0) {
-             return res.redirect('/carrinho');
-        }
+        if (items.length === 0) return res.redirect('/carrinho');
 
         const subtotal = items.reduce((acc, item) => {
             const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
             return acc + (precoFinal * item.quantidade);
         }, 0);
-        const frete = req.session.frete ? req.session.frete.cost : 0;
-        const frete_metodo = req.session.frete ? req.session.frete.name : 'A definir';
+        
+        const frete = req.session.frete.cost;
+        const frete_metodo = req.session.frete.name;
+        const endereco_entrega = req.session.endereco_entrega;
         const total = subtotal + frete;
 
         res.render('checkout', {
-            cart: { items, subtotal, frete, frete_metodo, total }, 
+            cart: { items, subtotal, frete, frete_metodo, total },
             user: user,
+            endereco: endereco_entrega,
             message: null
         });
     } catch (e) {
@@ -323,18 +365,21 @@ router.get('/checkout', async (req, res) => {
     }
 });
 
-// Rota para processar pagamentos (Cartão e PIX)
+
 router.post('/process_payment', async (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ error: 'Usuário não autenticado.' });
+    if (!req.session.userId || !req.session.frete || !req.session.endereco_entrega) {
+        return res.status(401).json({ error: 'Sessão inválida ou dados de entrega ausentes.' });
     }
 
-    const frete = req.session.frete ? req.session.frete.cost : 0;
     const { payment_method } = req.body;
     const user_id = req.session.userId;
+    const frete = req.session.frete.cost;
+    const endereco_entrega = req.session.endereco_entrega;
     const connection = await db.getConnection();
 
     try {
+        await connection.beginTransaction();
+
         const [cart] = await connection.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
         if (cart.length === 0) throw new Error('Carrinho não encontrado.');
         
@@ -351,73 +396,55 @@ router.post('/process_payment', async (req, res) => {
             return acc + (precoFinal * item.quantidade);
         }, 0);
         
-        // O valor da transação para o MP é o total (subtotal + frete)
         const transaction_amount = subtotal + frete;
-
         let paymentResult;
         const idempotencyKey = uuidv4();
-        await connection.beginTransaction();
 
-        if (payment_method === 'card') {
-            const { token, issuer_id, payment_method_id, installments, email, identificationType, identificationNumber } = req.body;
-            const card_payment_data = {
-                transaction_amount: parseFloat(transaction_amount.toFixed(2)),
-                token,
-                description: `Pedido de ${email}`,
-                installments,
-                payment_method_id,
-                issuer_id,
-                payer: {
-                    email,
-                    identification: { type: identificationType, number: identificationNumber },
-                },
-            };
-            paymentResult = await payment.create({ body: card_payment_data, requestOptions: { idempotencyKey } });
+        if (payment_method === 'card' || payment_method === 'pix') {
+            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete, endereco_entrega);
 
-            if (paymentResult.status === 'approved') {
-                // Passa o frete para a função createOrder
-                const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete);
-                await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado');
-                await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
+            if (payment_method === 'card') {
+                const { token, issuer_id, payment_method_id, installments, email, identificationType, identificationNumber } = req.body;
+                const card_payment_data = {
+                    transaction_amount: parseFloat(transaction_amount.toFixed(2)), token, description: `Pedido #${pedido_id}`, installments, payment_method_id, issuer_id,
+                    payer: { email, identification: { type: identificationType, number: identificationNumber } },
+                };
+                paymentResult = await payment.create({ body: card_payment_data, requestOptions: { idempotencyKey } });
+
+                if (paymentResult.status === 'approved') {
+                    await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
+                    await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
+                    await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
+                    
+                    delete req.session.frete;
+                    delete req.session.endereco_entrega;
+                    await connection.commit();
+                    return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
+                } else {
+                    await connection.rollback();
+                    return res.status(400).json({ success: false, message: `Pagamento recusado: ${paymentResult.status_detail}`, status: paymentResult.status_detail });
+                }
+
+            } else { // PIX
+                const { email } = req.body;
+                const pix_payment_data = {
+                    transaction_amount: parseFloat(transaction_amount.toFixed(2)), description: `Pedido #${pedido_id}`, payment_method_id: 'pix',
+                    payer: { email, first_name: req.session.userName },
+                };
+                paymentResult = await payment.create({ body: pix_payment_data, requestOptions: { idempotencyKey } });
+                await createPaymentRecord(connection, pedido_id, 'pix', 'pendente', paymentResult.id);
                 
-                delete req.session.frete; // Limpa o frete da sessão
+                delete req.session.frete;
+                delete req.session.endereco_entrega;
                 await connection.commit();
-                return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
-            } else {
-                await connection.rollback();
-                return res.status(400).json({ success: false, message: `Pagamento recusado: ${paymentResult.status_detail}`, status: paymentResult.status_detail });
+                
+                return res.status(201).json({
+                    success: true, payment_method: 'pix',
+                    qr_code: paymentResult.point_of_interaction.transaction_data.qr_code_base64,
+                    qr_code_text: paymentResult.point_of_interaction.transaction_data.qr_code,
+                    orderId: pedido_id
+                });
             }
-
-        } else if (payment_method === 'pix') {
-            const { email } = req.body;
-            // Passa o frete para a função createOrder
-            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete);
-            
-            const pix_payment_data = {
-                transaction_amount: parseFloat(transaction_amount.toFixed(2)),
-                description: `Pedido #${pedido_id}`,
-                payment_method_id: 'pix',
-                payer: {
-                    email,
-                    first_name: req.session.userName,
-                },
-            };
-            paymentResult = await payment.create({ body: pix_payment_data, requestOptions: { idempotencyKey } });
-
-            console.log(`PIX CRIADO! Salve este ID para a simulação: ${paymentResult.id}`);
-
-            await createPaymentRecord(connection, pedido_id, 'pix', 'pendente', paymentResult.id);
-            
-            delete req.session.frete; // Limpa o frete da sessão
-            await connection.commit();
-            
-            return res.status(201).json({
-                success: true,
-                payment_method: 'pix',
-                qr_code: paymentResult.point_of_interaction.transaction_data.qr_code_base64,
-                qr_code_text: paymentResult.point_of_interaction.transaction_data.qr_code,
-                orderId: pedido_id
-            });
         } else {
             throw new Error('Método de pagamento inválido.');
         }
@@ -431,19 +458,34 @@ router.post('/process_payment', async (req, res) => {
     }
 });
 
-// Funções auxiliares 
-async function createOrder(connection, user_id, total, items, status, frete) { 
+async function createOrder(connection, user_id, total, items, status, frete, endereco) {
+    const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
+    
+    // Verifica se o usuário já tem um CEP cadastrado
+    const [[currentUser]] = await connection.query('SELECT cep FROM users WHERE id = ?', [user_id]);
+    
+    // Se o usuário não tiver um endereço principal, salva este como principal
+    if (!currentUser || !currentUser.cep) {
+        await connection.query(
+            'UPDATE users SET cep = ?, logradouro = ?, numero = ?, complemento = ?, bairro = ?, cidade = ?, estado = ? WHERE id = ?', 
+            [cep, rua, numero, complemento, bairro, cidade, estado, user_id]
+        );
+    }
+
+    // Insere o pedido com o endereço de entrega específico
     const [pedidoResult] = await connection.query(
-        'INSERT INTO pedidos (user_id, status, total, frete) VALUES (?, ?, ?, ?)', 
-        [user_id, status, total, frete]
+        'INSERT INTO pedidos (user_id, status, total, frete, endereco_cep, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [user_id, status, total, frete, cep, rua, numero, complemento, bairro, cidade, estado]
     );
     const pedido_id = pedidoResult.insertId;
+
     const pedidoItensData = items.map(item => [
         pedido_id,
         item.produto_id,
         item.quantidade,
         item.preco * (1 - item.desconto_percentual / 100)
     ]);
+
     await connection.query(
         'INSERT INTO pedido_itens (pedido_id, produto_id, quantidade, preco_unitario) VALUES ?',
         [pedidoItensData]
@@ -467,7 +509,7 @@ router.get('/pedido/confirmacao/:id', async (req, res) => {
         const user_id = req.session.userId;
 
         const [pedidos] = await db.query(
-            `SELECT p.id, p.total, p.status, DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_pedido,
+            `SELECT p.*, DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_pedido,
                     pag.metodo, pag.status as status_pagamento
              FROM pedidos p
              LEFT JOIN pagamentos pag ON p.id = pag.pedido_id
@@ -496,13 +538,16 @@ router.get('/carrinho', async (req, res) => {
         return res.redirect('/login');
     }
     try {
+        delete req.session.frete;
+        delete req.session.endereco_entrega;
+
         const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [req.session.userId]);
         if (cart.length === 0) {
             return res.render('carrinho', { cart: null });
         }
         const carrinho_id = cart[0].id;
         const [items] = await db.query(
-            `SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.imagem_url, p.desconto_percentual  
+            `SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.imagem_url, p.desconto_percentual 
              FROM carrinho_itens ci JOIN produtos p ON ci.produto_id = p.id 
              WHERE ci.carrinho_id = ?`,
             [carrinho_id]
@@ -646,18 +691,19 @@ router.post('/carrinho/calcular-frete', async (req, res) => {
 });
 
 // Rota para salvar a opção de frete na sessão do usuário
-router.post('/carrinho/salvar-frete', (req, res) => {
+router.post('/carrinho/salvar-frete-e-endereco', (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ error: 'Usuário não autenticado.' });
     }
-    const { cost, name } = req.body;
-    if (typeof cost !== 'number' || typeof name !== 'string') {
-        return res.status(400).json({ error: 'Dados de frete inválidos.' });
+    const { shipping, address } = req.body;
+    if (!shipping || !address || typeof shipping.cost !== 'number' || typeof shipping.name !== 'string') {
+        return res.status(400).json({ error: 'Dados de entrega inválidos.' });
     }
     
-    // Salva o frete na sessão
-    req.session.frete = { cost, name };
-    res.json({ success: true, message: 'Frete salvo na sessão.' });
+    req.session.frete = shipping;
+    req.session.endereco_entrega = address;
+    
+    res.json({ success: true, message: 'Dados de entrega salvos na sessão.' });
 });
 
 // --- Para o frontend verificar o status do pedido ---
@@ -681,10 +727,8 @@ router.get('/pedido/status/:id', async (req, res) => {
     }
 });
 
-// ---  Webhook para receber notificações do Mercado Pago ---
 router.post('/mercado-pago-webhook', async (req, res) => {
     console.log('--- NOVO WEBHOOK RECEBIDO ---');
-    const notification = req.body;
 
     try {
         const notification = JSON.parse(req.body);
@@ -719,7 +763,6 @@ router.post('/mercado-pago-webhook', async (req, res) => {
                         console.log(`[LOG 5] Sucesso! Pedido ${pedido_id} atualizado para 'pago'.`);
                     } else {
                         console.warn(`[LOG FALHA] Nenhum pedido encontrado no banco de dados para o mp_payment_id: ${mp_payment_id}`);
-                        // Mesmo em falha, não vamos reverter para garantir que a transação termine.
                     }
                 } catch (dbError) {
                     console.error('[LOG ERRO DB] Erro no banco de dados:', dbError);

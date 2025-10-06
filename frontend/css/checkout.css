@@ -64,36 +64,6 @@
     margin-bottom: 24px;
 }
 
-.payment-options {
-    display: flex;
-    gap: 20px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 10px;
-}
-
-.payment-options label {
-    flex: 1;
-    padding: 10px;
-    text-align: center;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: background-color 0.3s ease;
-}
-
-.payment-options input[type="radio"] {
-    display: none; 
-}
-
-.payment-options input[type="radio"]:checked + label {
-    background-color: var(--color-blue-light);
-    color: var(--color-white);
-}
-
-.payment-options label:not(:has(:checked)):hover {
-    background-color: #f0f0f0;
-}
-
 /* Estilos dos formulários */
 .payment-form {
     margin-top: 16px;
@@ -104,6 +74,7 @@
     position: relative;
 }
 
+/* Estilo para as labels dos campos */
 .form-row label {
     display: block;
     margin-bottom: 6px;
@@ -131,7 +102,7 @@
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 8px;
-    height: 48px; 
+    height: 48px;
 }
 .grid2 {
     display: grid;
@@ -168,7 +139,7 @@
     background: transparent;
     color: var(--color-blue-dark);
     border: 1px solid var(--color-blue-dark);
-    display: none; 
+    display: none;
     width: 100%;
 }
 
@@ -266,7 +237,6 @@
     border-top: 1px solid #ddd;
 }
 
-/* --- Cartão Animado --- */
 .card-wrapper {
     margin: 1rem auto;
 }
@@ -278,35 +248,41 @@
 
 .payment-options {
     display: flex;
-    gap: 20px;
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 10px;
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .payment-options label {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     text-align: center;
     cursor: pointer;
     border-radius: 8px;
-    transition: background-color 0.3s ease;
+    border: 1px solid #ccc;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    font-weight: 600;
+    display: flex;         
+    align-items: center;     
+    justify-content: center; 
 }
 
 .payment-options input[type="radio"] {
     display: none; 
 }
 
+/* Estilo do "botão" quando selecionado (MODO CLARO) */
 .payment-options input[type="radio"]:checked + label {
-    background-color: var(--color-blue-light);
+    background-color: var(--color-blue-dark); 
     color: var(--color-white);
+    border-color: var(--color-blue-dark); 
 }
 
 .payment-options label:not(:has(:checked)):hover {
     background-color: #f0f0f0;
+    border-color: #bbb;
 }
 
-/* --- Estilos para Formulários --- */
+/* --- Novos Estilos para Formulários --- */
 .payment-form {
     margin-top: 16px;
     text-align: center;
@@ -328,7 +304,7 @@
     border-color: var(--color-blue-dark);
     box-shadow: 0 0 0 3px rgba(10, 36, 99, 0.1);
 }
-.mp-container {
+.mp-container { /* Container para campos do MP.js */
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 8px;
@@ -340,6 +316,7 @@
     gap: 12px;
 }
 
+/* --- Seção PIX Melhorada --- */
 #payment-pix-container {
     text-align: center;
 }
@@ -370,7 +347,7 @@
     background: transparent;
     color: var(--color-blue-dark);
     border: 1px solid var(--color-blue-dark);
-    display: none; 
+    display: none;
     width: 100%;
 }
 
@@ -482,6 +459,7 @@
 .modal-footer .cta-button.outline {
     width: 100%;
     display: block;
+    cursor: pointer;
 }
 
 body.dark-mode .modal-content {
@@ -489,7 +467,7 @@ body.dark-mode .modal-content {
 }
 
 body.dark-mode .modal-header {
-    border-bottom-color: #334;
+    border-bottom-color: #3A475A;
 }
 
 /* --- Estilo para Validação de Campos --- */
@@ -499,10 +477,98 @@ body.dark-mode .modal-header {
     box-shadow: 0 0 0 3px rgba(217, 83, 79, 0.1);
 }
 
-/* Garante que a div container do MP também seja destacada */
 #form-checkout__cardNumber.invalid,
 #form-checkout__securityCode.invalid,
 #form-checkout__expirationDate.invalid {
-    border: none;
+    border: none; 
     outline: none;
+}
+
+body.dark-mode .checkout-left,
+body.dark-mode .checkout-right {
+    background-color: #2a3b52;
+    box-shadow: none;
+    border: 1px solid #3A475A; 
+}
+
+body.dark-mode .ck-name,
+body.dark-mode .summary-row,
+body.dark-mode .summary-total {
+    color: var(--color-text);
+}
+body.dark-mode .ck-price {
+    color: #a9a9b3;
+}
+body.dark-mode .ck-item,
+body.dark-mode .summary-total {
+    border-color: #3A475A;
+}
+
+body.dark-mode .payment-options {
+    border-color: #3A475A;
+}
+
+body.dark-mode .payment-options label {
+    color: var(--color-text);
+}
+
+body.dark-mode .payment-options label:not(:has(:checked)):hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .payment-options input[type="radio"]:checked + label {
+    background-color: var(--color-orange-vibrant);
+    color: var(--color-white);
+    border-color: var(--color-orange-vibrant);
+}
+
+body.dark-mode .form-row label {
+    color: var(--color-text);
+}
+body.dark-mode .form-control {
+    background-color: var(--color-white); 
+    border-color: #3A475A; 
+    color: var(--color-text);
+}
+body.dark-mode .form-control::placeholder {
+    color: #a9a9b3;
+}
+body.dark-mode .form-control:focus {
+    border-color: var(--color-orange-vibrant);
+    box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.1);
+}
+
+body.dark-mode .pix-qr img {
+    border-color: #3A475A;
+}
+body.dark-mode .pix-code {
+    background-color: var(--color-white);
+    border-color: #3A475A;
+    color: var(--color-text);
+}
+body.dark-mode .cta-button.outline {
+    color: var(--color-orange-vibrant);
+    border-color: var(--color-orange-vibrant);
+}
+
+body.dark-mode .modal-content {
+    background-color: #2a3b52;
+    border: 1px solid #3A475A;
+}
+
+body.dark-mode .modal-header h3 {
+    color: #ff8a8a;
+}
+
+body.dark-mode .modal-body p {
+    color: #FFFFFF !important; 
+}
+
+body.dark-mode .modal-footer .cta-button.outline {
+    color: var(--color-orange-vibrant) !important; 
+    border-color: var(--color-orange-vibrant);
+}
+
+body.dark-mode .modal-close {
+    color: #d0d0d0;
 }

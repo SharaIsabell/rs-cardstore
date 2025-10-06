@@ -172,6 +172,24 @@ body.dark-mode .timeline-icon {
     text-align: center;
 }
 
+.shipping-address-summary {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.shipping-address-summary h3 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    color: var(--color-blue-dark);
+}
+
+.shipping-address-summary p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--color-text);
+}
+
 /* --- Responsividade --- */
 @media (max-width: 992px) {
     .order-details-grid {

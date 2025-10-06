@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pedido Confirmado! - RS Card Store</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
@@ -74,20 +75,23 @@
 
             <aside class="summary">
                 <h2 class="section-subtitle">Resumo da Compra</h2>
-                <% if (itens && itens.length) { %>
-                    <% itens.forEach(item => { %>
-                        <div class="ck-item">
-                            <img src="<%= item.imagem_url %>" alt="<%= item.nome %>">
-                            <div>
-                                <div class="ck-name"><%= item.nome %></div>
-                                <div class="ck-price">R$ <%= parseFloat(item.preco_unitario).toFixed(2) %> × <%= item.quantidade %></div>
-                            </div>
-                        </div>
-                    <% }) %>
-                <% } %>
                 <div class="summary-total">
-                    <span>Total Pago (<%= pedido.metodo %>)</span>                    
+                    <span>Total Pago (<%= pedido.metodo %>)</span>
                     <strong>R$ <%= parseFloat(pedido.total).toFixed(2) %></strong>
+                </div>
+
+                <div class="shipping-address-summary">
+                    <h3 class="section-subtitle">Endereço de Entrega</h3>
+                    <p>
+                        <%= pedido.endereco_rua %>, <%= pedido.endereco_numero %>
+                        <% if (pedido.endereco_complemento) { %>
+                            - <%= pedido.endereco_complemento %>
+                        <% } %>
+                        <br>
+                        <%= pedido.endereco_bairro %> - <%= pedido.endereco_cidade %>/<%= pedido.endereco_estado %>
+                        <br>
+                        CEP: <%= pedido.endereco_cep %>
+                    </p>
                 </div>
             </aside>
         </div>

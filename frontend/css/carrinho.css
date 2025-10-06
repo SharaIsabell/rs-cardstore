@@ -23,6 +23,7 @@
     border-radius: 10px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     transition: var(--theme-transition);
+    border: 1px solid #d8d8ec;
 }
 
 .item-image img {
@@ -147,21 +148,6 @@
     border-radius: 5px;
 }
 
-.cta-button-small {
-    padding: 10px 15px;
-    font-size: 0.9rem;
-    background-color: var(--color-blue-dark);
-    color: var(--color-white);
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-.cta-button-small:hover {
-    background-color: var(--color-blue-light);
-}
-
 .cta-button-small:disabled {
     background-color: #ccc;
     cursor: not-allowed;
@@ -223,6 +209,73 @@
     font-size: 0.9rem;
     color: #888;
     text-decoration: line-through;
+}
+
+#address-form-container input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+#address-form-container input:read-only {
+    background-color: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.address-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.cta-button-small {
+    background-color: var(--color-blue-dark);
+    color: var(--color-white);               
+    border: 2px solid var(--color-blue-dark); 
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    display: block; 
+    width: 100%;  
+}
+
+.cta-button-small.outline {
+    background-color: transparent;     
+    color: var(--color-blue-dark);       
+}
+
+.cta-button-small:not(.outline):hover {
+    transform: translateY(-2px);             
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); 
+}
+
+.cta-button-small.outline:hover {
+    background-color: var(--color-blue-dark); 
+    color: var(--color-white);               
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#address-options {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+#address-options .cta-button-small {
+    flex-grow: 1; 
+}
+
+#calculate-shipping-btn {
+    margin-top: 15px;
+}
+
+body.dark-mode .cart-item {
+    border: 1px solid #2a3b52;
 }
 
 @media (max-width: 992px) {

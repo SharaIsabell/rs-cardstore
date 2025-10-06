@@ -6,13 +6,13 @@
     --color-text: #333;
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Lato', sans-serif;
-    
     --theme-transition: all 0.5s ease;
 }
 
+/* Variáveis para o Modo Escuro */
 body.dark-mode {
-    --color-blue-dark: #e0e0e0; 
-    --color-white: #0D1B2A;
+    --color-blue-dark: #e0e0e0;
+    --color-white: #0D1B2A; 
     --color-gray-light: #1B263B; 
     --color-text: #E0E1E2; 
 }
@@ -38,6 +38,7 @@ body {
     z-index: 2;
 }
 
+/* Adiciona transição suave para todos os elementos afetados */
 .main-header, .product-card, .featured-products {
     transition: var(--theme-transition);
 }
@@ -46,8 +47,7 @@ body {
      transition: var(--theme-transition);
 }
 
-
-/* --- Cabeçalho --- */
+/* --- Cabeçalho (Header) --- */
 .main-header {
     background-color: var(--color-white);
     padding: 1rem 0;
@@ -87,6 +87,7 @@ body {
     color: var(--color-orange-vibrant);
 }
 
+/* Alinha todos os itens do cabeçalho em uma linha */
 .header-actions {
     display: flex;
     align-items: center;
@@ -154,6 +155,7 @@ body {
     background-color: #ffb14b;
 }
 
+/* Animação para flutuar */
 @keyframes float {
     0% {
         transform: translateY(0px) rotate(var(--r-start));
@@ -166,7 +168,7 @@ body {
     }
 }
 
-/* Cartas flutuantes */
+/* Container das cartas flutuantes */
 .floating-cards {
     position: absolute;
     top: 0;
@@ -178,9 +180,9 @@ body {
 
 .floating-cards .card {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.1); /* Cor de fundo semi-transparente */
-    border: 1px solid rgba(255, 255, 255, 0.3); /* Borda sutil */
-    width: 120px; /* Tamanho da carta */
+    background-color: rgba(255, 255, 255, 0.1); 
+    border: 1px solid rgba(255, 255, 255, 0.3); 
+    width: 120px; 
     height: 180px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
@@ -189,6 +191,7 @@ body {
     animation-iteration-count: infinite;
 }
 
+/* Posicionamento e animação individual de cada carta */
 .card-1 {
     top: 15%;
     left: 10%;
@@ -334,6 +337,7 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    border: 1px solid #d8d8ec; 
 }
 
 .product-card:hover {
@@ -420,12 +424,14 @@ body {
     height: 34px;
 }
 
+/* Esconde o checkbox padrão do HTML */
 .theme-switch input {
     opacity: 0;
     width: 0;
     height: 0;
 }
 
+/* O "trilho" do switch */
 .slider {
     position: absolute;
     cursor: pointer;
@@ -437,6 +443,7 @@ body {
     transition: var(--theme-transition);
 }
 
+/* O círculo que desliza (o "interruptor") */
 .slider:before {
     position: absolute;
     content: "";
@@ -448,6 +455,7 @@ body {
     transition: var(--theme-transition);
 }
 
+/* Estilos quando o checkbox está "marcado" (Modo Escuro ATIVO) */
 input:checked + .slider {
     background-color: var(--color-orange-vibrant);
 }
@@ -456,6 +464,7 @@ input:checked + .slider:before {
     transform: translateX(26px);
 }
 
+/* Deixa o slider com bordas arredondadas */
 .slider.round {
     border-radius: 34px;
 }
@@ -464,6 +473,7 @@ input:checked + .slider:before {
     border-radius: 50%;
 }
 
+/* Cores e posição dos ícones no switch */
 .slider .fa-moon {
     position: absolute;
     top: 50%;
@@ -472,7 +482,7 @@ input:checked + .slider:before {
     font-size: 1rem;
     left: 8px;
     opacity: 1;
-    color: var(--color-blue-dark); 
+    color: var(--color-blue-dark);
 }
 
 .slider .fa-sun {
@@ -487,19 +497,20 @@ input:checked + .slider:before {
 }
 
 input:checked + .slider .fa-moon {
-    opacity: 0; 
+    opacity: 0; /* Esconde a lua no modo escuro */
 }
 
 input:checked + .slider .fa-sun {
-    opacity: 1; 
+    opacity: 1; /* Mostra o sol no modo escuro */
 }
 
 
-/* --- Rodapé --- */
+/* --- Rodapé (Footer) --- */
 .main-footer {
     background-color: var(--color-blue-dark);
     color: var(--color-gray-light);
     padding-top: 60px;
+    border-top: 4px solid var(--color-orange-vibrant);
 }
 
 .footer-content {
@@ -549,7 +560,7 @@ input:checked + .slider .fa-sun {
 /* --- Responsividade --- */
 @media (max-width: 992px) {
     .main-nav {
-        display: none; 
+        display: none;
     }
     .hero h1 {
         font-size: 2.8rem;
@@ -612,6 +623,7 @@ input:checked + .slider .fa-sun {
     transition: var(--theme-transition);
 }
 
+/* O conteúdo do banner fica na frente do overlay e das cartas */
 .page-hero .hero-content {
     position: relative;
     z-index: 3;
@@ -630,6 +642,11 @@ input:checked + .slider .fa-sun {
     opacity: 0.9;
 }
 
+.magic-hero {
+    background-image: url('https://images.ctfassets.net/s5n2t79q9d70/4OIM49Qp5gEa2e8Ie2m2eC/22375b0a708235e16ed5361362b85e09/Magic-The-Gathering-Logo-Hero-Desktop-2.jpg');
+}
+
+/* --- Barra de Ferramentas (Filtros e Ordenação) --- */
 .product-toolbar {
     display: flex;
     justify-content: space-between;
@@ -667,6 +684,7 @@ input:checked + .slider .fa-sun {
     transition: var(--theme-transition);
 }
 
+/* Ajustes no Product Card para o link */
 .product-card .product-link-wrapper {
     text-decoration: none;
     color: inherit;
@@ -676,6 +694,7 @@ input:checked + .slider .fa-sun {
     flex-grow: 1;
 }
 
+/* --- Paginação --- */
 .pagination {
     margin-top: 60px;
     display: flex;
@@ -719,5 +738,45 @@ input:checked + .slider .fa-sun {
 .header-actions .user-greeting {
     font-weight: 700;
     color: var(--color-blue-dark);
-    margin-right: 1rem; 
+    margin-right: 1rem;
+}
+
+body.dark-mode .product-card {
+    border: 1px solid #2a3b52; 
+}
+
+body.dark-mode .category-card {
+    color: #FFFFFF; 
+}
+
+body.dark-mode .category-card-content .btn-secondary {
+    color: #FFFFFF; 
+    border-color: rgba(255, 255, 255, 0.8); 
+}
+
+body.dark-mode .category-card-content .btn-secondary:hover {
+    color: var(--color-white);
+}
+
+body.dark-mode .main-footer {
+    background-color: #08121a; 
+    color: #E0E1E2; 
+}
+
+body.dark-mode .footer-column h4 {
+    color: #FFFFFF; 
+}
+
+body.dark-mode .footer-column ul a,
+body.dark-mode .social-icons a {
+    color: #a9a9b3; 
+}
+
+body.dark-mode .footer-column ul a:hover,
+body.dark-mode .social-icons a:hover {
+    color: var(--color-orange-vibrant); 
+}
+
+body.dark-mode .footer-bottom {
+    border-top: 1px solid #1B263B;
 }
