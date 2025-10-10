@@ -17,15 +17,10 @@
                 <h2>Bem-vindo de volta!</h2>
                 <p>Entre para dominar o jogo.</p>
                 <% if (typeof message !== 'undefined' && message) { %>
-                    <div class="success-message">
-                        <%= message %>
-                    </div>
+                    <div class="success-message"><%= message %></div>
                 <% } %>
-
-                <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
-                    <div class="error-message">
-                        <%= errorMessage %>
-                    </div>
+                <% if (typeof errorMessage !== 'undefined' && errorMessage && errorMessage !== 'As senhas não coincidem.') { %>
+                    <div class="error-message"><%= errorMessage %></div>
                 <% } %>
                 
                 <form action="/login" method="POST">
@@ -47,7 +42,7 @@
             <div class="register-form">
                 <h2>Crie sua conta!</h2>
                 <p>Junte-se a nós e comece a jogar.</p>
-                <form action="/register" method="POST">
+                <form id="registerForm" action="/register" method="POST">
                     <div class="input-group">
                         <input type="text" id="registerName" name="nome" required placeholder=" ">
                         <label for="registerName">Nome Completo</label>
@@ -68,7 +63,7 @@
                         <input type="password" id="confirmPassword" name="confirmSenha" required placeholder=" ">
                         <label for="confirmPassword">Confirmar Senha</label>
                     </div>
-                    <button type="submit" class="cta-button">Cadastrar</button>
+                    <button type="submit" class="cta-button" id="registerButton">Cadastrar</button>
                 </form>
             </div>
         </div>
@@ -88,8 +83,97 @@
             </div>
         </div>
     </div>
+
+    <div id="popup" class="popup-overlay">
+        <div class="popup-content">
+            <h3 id="popup-title">Atenção!</h3>
+            <p id="popup-message"></p>
+            <button id="close-popup" class="popup-button">Entendi</button>
+        </div>
+    </div>
     <script src="../js/particles.min.js"></script>
     <script src="../js/login.js"></script>
     <script src="../js/auth.js"></script>
+
+     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const registerForm = document.getElementById('registerForm');
+            const registerButton = document.getElementById('registerButton');
+            const popup = document.getElementById('popup');
+            const popupTitle = document.getElementById('popup-title');
+            const popupMessage = document.getElementById('popup-message');
+            const closePopupButton = document.getElementById('close-popup');
+
+            const showPopup = (title, message, isSuccess = false) => {
+                popupTitle.textContent = title;
+                popupMessage.textContent = message;
+                popupTitle.style.color = isSuccess ? '#28a745' : 'var(--color-orange-vibrant)';
+                popup.classList.add('active');
+            };
+
+            // Função para fechar o pop-up
+            const closePopup = () => {
+                popup.classList.remove('active');
+            };
+            
+            closePopupButton.addEventListener('click', closePopup);
+            popup.addEventListener('click', (event) => {
+                if (event.target === popup) {
+                    closePopup();
+                }
+            });
+
+            // Interceptar o envio do formulário de cadastro
+            if (registerForm) {
+                registerForm.addEventListener('submit', async (event) => {
+                    event.preventDefault(); // Impede o recarregamento da página
+
+                    const originalButtonText = registerButton.textContent;
+                    registerButton.textContent = 'Enviando...';
+                    registerButton.disabled = true;
+
+                    // Coleta os dados do formulário
+                    const formData = new FormData(registerForm);
+                    const data = Object.fromEntries(formData.entries());
+
+                    try {
+                        const response = await fetch('/register', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json' // Informa ao servidor que esperamos JSON
+                            },
+                            body: JSON.stringify(data)
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showPopup('Sucesso!', result.message, true);
+                            registerForm.reset(); // Limpa o formulário
+                            setTimeout(() => {
+                                document.querySelector('.auth-container').classList.remove('right-panel-active');
+                                closePopup();
+                            }, 3000);
+                        } else { 
+                            showPopup('Atenção!', result.message, false);
+                        }
+
+                    } catch (error) {
+                        console.error('Erro de rede:', error);
+                        showPopup('Erro!', 'Não foi possível conectar ao servidor. Tente novamente mais tarde.', false);
+                    } finally {
+                        registerButton.textContent = originalButtonText;
+                        registerButton.disabled = false;
+                    }
+                });
+            }
+
+            const successMessage = "<%= typeof message !== 'undefined' ? message : '' %>";
+            if (successMessage) {
+                 showPopup('Sucesso!', successMessage, true);
+            }
+        });
+    </script>
 </body>
 </html>

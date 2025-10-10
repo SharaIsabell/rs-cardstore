@@ -58,52 +58,58 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/magic', async (req, res) => {
+async function renderProductPage(req, res, viewName, category, baseUrl) {
   try {
-    const [rows] = await db.query(
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = 4; // Limite de 4 produtos por página
+    const offset = (page - 1) * limit;
+
+    // Condição WHERE para a consulta
+    const whereClause = category ? `WHERE categoria = ?` : `WHERE promocao = TRUE`;
+    const queryParams = category ? [category] : [];
+
+    // Contar o total de produtos para calcular as páginas
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) as total FROM produtos ${whereClause}`,
+      queryParams
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    // Buscar os produtos da página atual
+    const [produtos] = await db.query(
       `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
          FROM produtos 
-        WHERE categoria = ? 
-     ORDER BY id DESC`,
-      ['Magic']
+         ${whereClause}
+         ORDER BY id DESC 
+         LIMIT ? 
+         OFFSET ?`,
+      [...queryParams, limit, offset]
     );
-    res.render('magic', { produtos: rows });
+
+    res.render(viewName, {
+      produtos: produtos,
+      totalPages: totalPages,
+      currentPage: page,
+      baseUrl: baseUrl 
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Erro ao carregar produtos de Magic.');
+    console.error(`Erro ao carregar produtos para a página ${viewName}:`, err);
+    res.status(500).send(`Erro ao carregar a página de ${viewName}.`);
   }
+}
+
+router.get('/magic', (req, res) => {
+  renderProductPage(req, res, 'magic', 'Magic', '/magic');
 });
 
-router.get('/yugioh', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo
-         FROM produtos
-        WHERE categoria = ?
-     ORDER BY id DESC`,
-      ['Yu-Gi-Oh']
-    );
-    res.render('yugioh', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao consultar produtos Yu-Gi-Oh:', err);
-    res.status(500).send('Erro ao carregar produtos de Yu-Gi-Oh.');
-  }
+router.get('/yugioh', (req, res) => {
+  renderProductPage(req, res, 'yugioh', 'Yu-Gi-Oh', '/yugioh');
 });
 
-router.get('/pokemon', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo
-         FROM produtos
-        WHERE categoria = ?
-     ORDER BY id DESC`,
-      ['Pokemon']
-    );
-    res.render('pokemon', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao consultar produtos Pokémon:', err);
-    res.status(500).send('Erro ao carregar produtos de Pokémon.');
-  }
+router.get('/pokemon', (req, res) => {
+  renderProductPage(req, res, 'pokemon', 'Pokemon', '/pokemon');
 });
 
 router.get('/produto/:id', async (req, res) => {
@@ -125,36 +131,12 @@ router.get('/produto/:id', async (req, res) => {
   }
 });
 
-router.get('/acessorios', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
-         FROM produtos 
-        WHERE categoria = ? 
-     ORDER BY id DESC`,
-      ['Acessorios']
-    );
-    res.render('acessorios', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao carregar produtos de Acessórios:', err);
-    res.status(500).send('Erro ao carregar a página de acessórios.');
-  }
+router.get('/acessorios', (req, res) => {
+  renderProductPage(req, res, 'acessorios', 'Acessorios', '/acessorios');
 });
 
-router.get('/promocoes', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
-         FROM produtos 
-        WHERE promocao = ? 
-     ORDER BY id DESC`,
-      [true]
-    );
-    res.render('promocoes', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao carregar produtos em promoção:', err);
-    res.status(500).send('Erro ao carregar a página de promoções.');
-  }
+router.get('/promocoes', (req, res) => {
+  renderProductPage(req, res, 'promocoes', null, '/promocoes');
 });
 
 router.get('/login', (req, res) => {
@@ -165,26 +147,39 @@ router.get('/login', (req, res) => {
     res.render('login', { message: message, errorMessage: null });
 });
 
-// ROTA DE REGISTRO MODIFICADA
 router.post('/register', async (req, res) => {
   const { nome, email, telefone, senha, confirmSenha } = req.body;
   
+  const respondError = (message) => {
+    if (req.accepts('json')) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.status(400).render('login', { 
+        message: null, 
+        errorMessage: message,
+        showRegister: true
+    });
+  };
+
   if (senha !== confirmSenha) {
-    return res.status(400).send('As senhas não coincidem.');
+    return respondError('As senhas não coincidem.');
   }
+
   if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
-      return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
+    return respondError('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
   }
+
   const telefoneNumerico = telefone.replace(/\D/g, '');
-  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) { // Ajuste para 10 ou 11 dígitos
-    return res.status(400).send('O telefone deve conter 10 ou 11 dígitos numéricos.');
+  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) {
+    return respondError('O telefone deve conter 10 ou 11 dígitos numéricos.');
   }
 
   try {
     const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser.length > 0) {
-        return res.status(409).send('Este e-mail já está cadastrado.');
+      return respondError('Este e-mail já está cadastrado.');
     }
+
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash(senha, salt);
     const token_verificacao = crypto.randomBytes(32).toString('hex');
@@ -196,10 +191,19 @@ router.post('/register', async (req, res) => {
     );
 
     await enviarEmailVerificacao(email, token_verificacao);
-    res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
+    
+  if (req.accepts('json')) {
+      return res.status(201).json({ success: true, message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.' });
+  }
+  return res.status(201).render('login', {
+    errorMessage: null,
+    message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.',
+    showRegister: false
+  });
+
   } catch (error) {
     console.error('ERRO DETALHADO AO CADASTRAR:', error);
-    res.status(500).send('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
+    return respondError('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
   }
 });
 

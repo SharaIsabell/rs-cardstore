@@ -1,0 +1,25 @@
+<% if (totalPages > 0) { %>
+<nav class="pagination" aria-label="Navegação de página de produtos">
+  <ul>
+    <li>
+      <a <% if (currentPage > 1) { %>href="<%= baseUrl %>?page=<%= currentPage - 1 %>#lista-produtos"<% } %> 
+         class="prev <%= currentPage === 1 ? 'disabled' : '' %>"
+         aria-disabled="<%= currentPage === 1 %>">Anterior</a>
+    </li>
+
+    <% for (let i = 1; i <= totalPages; i++) { %>
+      <li>
+        <a href="<%= baseUrl %>?page=<%= i %>#lista-produtos" 
+           class="<%= currentPage === i ? 'active' : '' %>"
+           aria-current="<%= currentPage === i ? 'page' : false %>"><%= i %></a>
+      </li>
+    <% } %>
+
+    <li>
+      <a <% if (currentPage < totalPages) { %>href="<%= baseUrl %>?page=<%= currentPage + 1 %>#lista-produtos"<% } %> 
+         class="next <%= currentPage >= totalPages ? 'disabled' : '' %>"
+         aria-disabled="<%= currentPage >= totalPages %>">Próxima</a>
+    </li>
+  </ul>
+</nav>
+<% } %>

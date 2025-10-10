@@ -27,7 +27,7 @@
             </div>
         </section>
 
-        <section class="section">
+        <section class="section" id="lista-produtos">
             <div class="container">
                 <h2 class="section-title">Todos os Produtos em Promoção</h2>
 
@@ -100,15 +100,8 @@
                     <% } %>
                 </div>
 
-                <nav class="pagination" aria-label="Navegação de página de produtos">
-                    <ul>
-                        <li><a href="#" class="disabled" aria-disabled="true">« Anterior</a></li>
-                        <li><a href="#" class="active" aria-current="page">1</a></li>
-                        <li><a href="#">2</a></li>
-                        <li><a href="#">3</a></li>
-                        <li><a href="#">Próximo »</a></li>
-                    </ul>
-                </nav>
+                    <%- include('partials/pagination') %>
+                    
             </div>
         </section>
     </main>
