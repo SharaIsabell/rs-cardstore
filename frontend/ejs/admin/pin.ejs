@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirmação de PIN • RS Card Store</title>
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+
+<body>
+    <%- include('../partials/header') %>
+
+        <main class="container section">
+            <h1 class="section-title">Confirmação de PIN</h1>
+
+            <p>Olá <strong>
+                    <%= adminEmail %>
+                </strong>, seu PIN desta sessão é:</p>
+
+            <p style="font-size:2rem; letter-spacing:.25rem; margin:.5rem 0;">
+                <strong>
+                    <%= pin %>
+                </strong>
+            </p>
+
+            <p>Digite abaixo para confirmar o acesso ao painel.</p>
+
+            <% if (typeof errorMessage !=='undefined' && errorMessage) { %>
+                <div class="error-message" style="margin:.75rem 0;">
+                    <%= errorMessage %>
+                </div>
+                <% } %>
+
+                    <form action="/admin/pin" method="POST" style="margin-top:1rem;">
+                        <input type="text" name="pin" required inputmode="numeric"
+                            pattern="[0-9]{<%= String(pin).length %>}" maxlength="<%= String(pin).length %>"
+                            autocomplete="one-time-code" oninput="this.value = this.value.replace(/[^0-9]/g,'');"
+                            style="padding:.6rem .8rem; border:1px solid #ccc; border-radius:.5rem; width:10rem; text-align:center;" />
+
+                        <button class="cta-button" type="submit" style="margin-left:.5rem;">Confirmar PIN</button>
+                    </form>
+        </main>
+
+        <%- include('../partials/footer') %>
+</body>
+
+</html>

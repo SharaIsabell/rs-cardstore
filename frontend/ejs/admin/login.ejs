@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login Admin - RS Card Store</title>
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+
+<body class="admin-auth">
+  <div class="admin-auth__wrap">
+    <div class="admin-auth__card">
+      <h1 class="admin-auth__title">Admin • RS Card Store</h1>
+
+      <% if (message) { %>
+        <div class="alert warning">
+          <%= message %>
+        </div>
+        <% } %>
+
+              <form method="POST" action="/admin/login" class="admin-auth__form">
+                <div class="field">
+                  <label for="email">E-mail</label>
+                  <input id="email" name="email" type="email" placeholder="admin@rscardstore.com" required />
+                </div>
+
+                <div class="field">
+                  <label for="senha">Senha</label>
+                  <input id="senha" name="senha" type="password" autocomplete="current-password" required />
+                </div>
+
+                <button class="cta-button" type="submit">Entrar</button>
+              </form>
+    </div>
+  </div>
+</body>
+
+</html>

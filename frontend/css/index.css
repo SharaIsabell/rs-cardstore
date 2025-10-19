@@ -30,6 +30,21 @@ body {
     transition: var(--theme-transition);
 }
 
+/* Alterações para a página do admin  */
+
+html, body {
+  height: 100%;
+}
+
+main.container.section {
+  min-height: calc(100vh - 160px);
+}
+
+/* Evita margin-bottom "fantasma" no último filho  */
+main.container.section > *:last-child {
+  margin-bottom: 0;
+}
+
 .container {
     width: 90%;
     max-width: 1200px;
@@ -780,4 +795,16 @@ body.dark-mode .social-icons a:hover {
 
 body.dark-mode .footer-bottom {
     border-top: 1px solid #1B263B;
+}
+
+/* Css do admin */
+.admin-chip{
+  display:inline-block;
+  margin-right:12px;
+  padding:4px 10px;
+  font-size:.85rem;
+  font-weight:700;
+  border-radius:999px;
+  background: var(--accent, #ff9f1c);
+  color:#0b1b3b;
 }

@@ -32,6 +32,7 @@ router.use((req, res, next) => {
   next();
 });
 
+// ... (outras rotas como '/', '/magic', etc. permanecem as mesmas)
 router.get('/', async (req, res) => {
   try {
     const [novosProdutos] = await db.query(
@@ -58,58 +59,52 @@ router.get('/', async (req, res) => {
   }
 });
 
-async function renderProductPage(req, res, viewName, category, baseUrl) {
+router.get('/magic', async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = 4; // Limite de 4 produtos por página
-    const offset = (page - 1) * limit;
-
-    // Condição WHERE para a consulta
-    const whereClause = category ? `WHERE categoria = ?` : `WHERE promocao = TRUE`;
-    const queryParams = category ? [category] : [];
-
-    // Contar o total de produtos para calcular as páginas
-    const [[{ total }]] = await db.query(
-      `SELECT COUNT(*) as total FROM produtos ${whereClause}`,
-      queryParams
-    );
-
-    const totalPages = Math.ceil(total / limit);
-
-    // Buscar os produtos da página atual
-    const [produtos] = await db.query(
+    const [rows] = await db.query(
       `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
          FROM produtos 
-         ${whereClause}
-         ORDER BY id DESC 
-         LIMIT ? 
-         OFFSET ?`,
-      [...queryParams, limit, offset]
+        WHERE categoria = ? 
+     ORDER BY id DESC`,
+      ['Magic']
     );
-
-    res.render(viewName, {
-      produtos: produtos,
-      totalPages: totalPages,
-      currentPage: page,
-      baseUrl: baseUrl 
-    });
-
+    res.render('magic', { produtos: rows });
   } catch (err) {
-    console.error(`Erro ao carregar produtos para a página ${viewName}:`, err);
-    res.status(500).send(`Erro ao carregar a página de ${viewName}.`);
+    console.error(err);
+    res.status(500).send('Erro ao carregar produtos de Magic.');
   }
-}
-
-router.get('/magic', (req, res) => {
-  renderProductPage(req, res, 'magic', 'Magic', '/magic');
 });
 
-router.get('/yugioh', (req, res) => {
-  renderProductPage(req, res, 'yugioh', 'Yu-Gi-Oh', '/yugioh');
+router.get('/yugioh', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo
+         FROM produtos
+        WHERE categoria = ?
+     ORDER BY id DESC`,
+      ['Yu-Gi-Oh']
+    );
+    res.render('yugioh', { produtos: rows });
+  } catch (err) {
+    console.error('Erro ao consultar produtos Yu-Gi-Oh:', err);
+    res.status(500).send('Erro ao carregar produtos de Yu-Gi-Oh.');
+  }
 });
 
-router.get('/pokemon', (req, res) => {
-  renderProductPage(req, res, 'pokemon', 'Pokemon', '/pokemon');
+router.get('/pokemon', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo
+         FROM produtos
+        WHERE categoria = ?
+     ORDER BY id DESC`,
+      ['Pokemon']
+    );
+    res.render('pokemon', { produtos: rows });
+  } catch (err) {
+    console.error('Erro ao consultar produtos Pokémon:', err);
+    res.status(500).send('Erro ao carregar produtos de Pokémon.');
+  }
 });
 
 router.get('/produto/:id', async (req, res) => {
@@ -131,12 +126,36 @@ router.get('/produto/:id', async (req, res) => {
   }
 });
 
-router.get('/acessorios', (req, res) => {
-  renderProductPage(req, res, 'acessorios', 'Acessorios', '/acessorios');
+router.get('/acessorios', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
+         FROM produtos 
+        WHERE categoria = ? 
+     ORDER BY id DESC`,
+      ['Acessorios']
+    );
+    res.render('acessorios', { produtos: rows });
+  } catch (err) {
+    console.error('Erro ao carregar produtos de Acessórios:', err);
+    res.status(500).send('Erro ao carregar a página de acessórios.');
+  }
 });
 
-router.get('/promocoes', (req, res) => {
-  renderProductPage(req, res, 'promocoes', null, '/promocoes');
+router.get('/promocoes', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
+         FROM produtos 
+        WHERE promocao = ? 
+     ORDER BY id DESC`,
+      [true]
+    );
+    res.render('promocoes', { produtos: rows });
+  } catch (err) {
+    console.error('Erro ao carregar produtos em promoção:', err);
+    res.status(500).send('Erro ao carregar a página de promoções.');
+  }
 });
 
 router.get('/login', (req, res) => {
@@ -144,66 +163,47 @@ router.get('/login', (req, res) => {
     if (req.query.status === 'verificado') {
         message = 'E-mail verificado com sucesso! Você já pode fazer o login.';
     }
+    // Passamos tanto a mensagem de sucesso quanto a de erro (inicialmente nula)
     res.render('login', { message: message, errorMessage: null });
 });
 
+// ROTA DE REGISTRO MODIFICADA
 router.post('/register', async (req, res) => {
+  // O campo 'endereco' não é mais coletado aqui
   const { nome, email, telefone, senha, confirmSenha } = req.body;
   
-  const respondError = (message) => {
-    if (req.accepts('json')) {
-      return res.status(400).json({ success: false, message });
-    }
-    return res.status(400).render('login', { 
-        message: null, 
-        errorMessage: message,
-        showRegister: true
-    });
-  };
-
   if (senha !== confirmSenha) {
-    return respondError('As senhas não coincidem.');
+    return res.status(400).send('As senhas não coincidem.');
   }
-
   if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
-    return respondError('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
+      return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
   }
-
   const telefoneNumerico = telefone.replace(/\D/g, '');
-  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) {
-    return respondError('O telefone deve conter 10 ou 11 dígitos numéricos.');
+  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) { // Ajuste para 10 ou 11 dígitos
+    return res.status(400).send('O telefone deve conter 10 ou 11 dígitos numéricos.');
   }
 
   try {
     const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser.length > 0) {
-      return respondError('Este e-mail já está cadastrado.');
+        return res.status(409).send('Este e-mail já está cadastrado.');
     }
-
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash(senha, salt);
     const token_verificacao = crypto.randomBytes(32).toString('hex');
     const token_verificacao_expira = new Date(Date.now() + 5 * 60 * 1000);
     
+    // Query de inserção sem o campo 'endereco'
     await db.query(
       'INSERT INTO users (nome, email, telefone, senha_hash, token_verificacao, token_verificacao_expira) VALUES (?, ?, ?, ?, ?, ?)',
       [nome, email, telefoneNumerico, senha_hash, token_verificacao, token_verificacao_expira]
     );
 
     await enviarEmailVerificacao(email, token_verificacao);
-    
-  if (req.accepts('json')) {
-      return res.status(201).json({ success: true, message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.' });
-  }
-  return res.status(201).render('login', {
-    errorMessage: null,
-    message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.',
-    showRegister: false
-  });
-
+    res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
   } catch (error) {
     console.error('ERRO DETALHADO AO CADASTRAR:', error);
-    return respondError('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
+    res.status(500).send('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
   }
 });
 
@@ -235,45 +235,77 @@ router.get('/verificar-email', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
 
-    // Se o usuário não existe ou a senha está incorreta
+    // 1) Tenta ADMIN primeiro
+    {
+      const [admins] = await db.query(
+        'SELECT id, email, password_hash, is_active FROM admins WHERE email = ?',
+        [email]
+      );
+      if (admins.length > 0 && admins[0].is_active === 1) {
+        const ok = await bcrypt.compare(senha, admins[0].password_hash);
+        if (ok) {
+          // Regenera sessão p/ evitar fixation
+          return req.session.regenerate(err => {
+            if (err) {
+              console.error('Erro ao regenerar sessão (admin):', err);
+              return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
+            }
+            // Seta flags de admin e limpa qualquer estado de cliente
+            req.session.isAdmin = true;
+            req.session.adminId = admins[0].id;
+            req.session.adminEmail = admins[0].email;
+
+            delete req.session.userId;
+            delete req.session.userName;
+            delete req.session.canAccessCheckout;
+            delete req.session.frete;
+            delete req.session.freteInfo;
+            delete req.session.pagamento;
+
+            return req.session.save(() => res.redirect('/admin'));
+          });
+        }
+      }
+    }
+
+    // 2) Não é admin (ou senha incorreta) -> segue fluxo de CLIENTE
+    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     if (users.length === 0) {
-      return res.status(401).render('login', { 
-        message: null, 
-        errorMessage: 'E-mail ou senha inválidos.' 
-      });
+      return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
     }
 
     const user = users[0];
     const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
-
     if (!senhaCorreta) {
-      return res.status(401).render('login', { 
-        message: null, 
-        errorMessage: 'E-mail ou senha inválidos.' 
-      });
+      return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
     }
 
-    // Se o e-mail ainda não foi verificado
     if (!user.email_verificado) {
-        return res.status(403).render('login', { 
-          message: null, 
-          errorMessage: 'Por favor, verifique seu e-mail antes de fazer o login.' 
-        });
+      return res.status(403).render('login', { message: null, errorMessage: 'Por favor, verifique seu e-mail antes de fazer o login.' });
     }
 
-    // Se tudo estiver correto, cria a sessão e redireciona
-    req.session.userId = user.id;
-    req.session.userName = user.nome;
-    res.redirect('/');
-    
+    // Regenera sessão p/ cliente
+    req.session.regenerate(err => {
+      if (err) {
+        console.error('Erro ao regenerar sessão (cliente):', err);
+        return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
+      }
+
+      req.session.userId = user.id;
+      req.session.userName = user.nome;
+
+      // Garante que NÃO é admin
+      req.session.isAdmin = false;
+      delete req.session.adminId;
+      delete req.session.adminEmail;
+
+      return req.session.save(() => res.redirect('/'));
+    });
+
   } catch (error) {
     console.error('ERRO DETALHADO AO FAZER LOGIN:', error);
-    res.status(500).render('login', { 
-      message: null, 
-      errorMessage: 'Ocorreu um erro no servidor ao tentar fazer login.' 
-    });
+    res.status(500).render('login', { message: null, errorMessage: 'Ocorreu um erro no servidor ao tentar fazer login.' });
   }
 });
 
@@ -286,12 +318,13 @@ router.get('/logout', (req, res) => {
     });
 });
 
-// --- Buscar endereço do usuário ---
+// --- NOVA ROTA: Buscar endereço do usuário ---
 router.get('/api/get-address', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ success: false, message: 'Não autenticado.' });
     }
     try {
+        // CORREÇÃO: Seleciona as novas colunas de endereço
         const [users] = await db.query(
             'SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM users WHERE id = ?', 
             [req.session.userId]
@@ -301,14 +334,14 @@ router.get('/api/get-address', async (req, res) => {
             // Monta um objeto de endereço para enviar ao front-end
             const address = {
                 cep: users[0].cep,
-                rua: users[0].logradouro,
+                rua: users[0].logradouro, // O front-end espera 'rua'
                 numero: users[0].numero,
                 complemento: users[0].complemento,
                 bairro: users[0].bairro,
                 cidade: users[0].cidade,
                 estado: users[0].estado,
             };
-
+            // O front-end espera um JSON stringificado, então mantemos esse padrão
             res.json({ success: true, address: JSON.stringify(address) });
         } else {
             res.json({ success: false, message: 'Nenhum endereço cadastrado.' });
@@ -319,6 +352,7 @@ router.get('/api/get-address', async (req, res) => {
     }
 });
 
+// ROTA CHECKOUT MODIFICADA
 router.get('/checkout', async (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login');
@@ -465,7 +499,7 @@ router.post('/process_payment', async (req, res) => {
 async function createOrder(connection, user_id, total, items, status, frete, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
     
-    // Verifica se o usuário já tem um CEP cadastrado
+    // CORREÇÃO: Verifica se o usuário já tem um CEP cadastrado
     const [[currentUser]] = await connection.query('SELECT cep FROM users WHERE id = ?', [user_id]);
     
     // Se o usuário não tiver um endereço principal, salva este como principal
@@ -512,6 +546,7 @@ router.get('/pedido/confirmacao/:id', async (req, res) => {
         const pedido_id = req.params.id;
         const user_id = req.session.userId;
 
+        // ATUALIZAÇÃO: Busca também os dados de endereço do pedido
         const [pedidos] = await db.query(
             `SELECT p.*, DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_pedido,
                     pag.metodo, pag.status as status_pagamento
@@ -542,6 +577,7 @@ router.get('/carrinho', async (req, res) => {
         return res.redirect('/login');
     }
     try {
+        // Limpa dados de frete/endereço antigos ao visitar o carrinho
         delete req.session.frete;
         delete req.session.endereco_entrega;
 
@@ -710,7 +746,7 @@ router.post('/carrinho/salvar-frete-e-endereco', (req, res) => {
     res.json({ success: true, message: 'Dados de entrega salvos na sessão.' });
 });
 
-// --- Para o frontend verificar o status do pedido ---
+// --- ROTA NOVA: Para o frontend verificar o status do pedido ---
 router.get('/pedido/status/:id', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ error: "Não autorizado" });
@@ -731,10 +767,13 @@ router.get('/pedido/status/:id', async (req, res) => {
     }
 });
 
+// --- ROTA NOVA: Webhook para receber notificações do Mercado Pago ---
+// SUBSTITUA SUA ROTA DE WEBHOOK ANTIGA POR ESTA:
 router.post('/mercado-pago-webhook', async (req, res) => {
     console.log('--- NOVO WEBHOOK RECEBIDO ---');
 
     try {
+        // LINHA CORRIGIDA: Converte o corpo bruto (Buffer) para JSON
         const notification = JSON.parse(req.body);
         
         if (notification.type === 'payment' && notification.data && notification.data.id) {
@@ -767,6 +806,7 @@ router.post('/mercado-pago-webhook', async (req, res) => {
                         console.log(`[LOG 5] Sucesso! Pedido ${pedido_id} atualizado para 'pago'.`);
                     } else {
                         console.warn(`[LOG FALHA] Nenhum pedido encontrado no banco de dados para o mp_payment_id: ${mp_payment_id}`);
+                        // Mesmo em falha, não vamos reverter para garantir que a transação termine.
                     }
                 } catch (dbError) {
                     console.error('[LOG ERRO DB] Erro no banco de dados:', dbError);

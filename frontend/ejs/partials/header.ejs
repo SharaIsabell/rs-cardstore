@@ -1,39 +1,64 @@
 <header class="main-header">
-    <div class="container header-content">
-        <a href="/" class="logo">RS<span>CardStore</span></a>
- 
-        <nav class="main-nav">
-            <a href="/magic">Magic: The Gathering</a>
-            <a href="/yugioh">Yu-Gi-Oh!</a>
-            <a href="/pokemon">Pokémon TCG</a>
-            <a href="/acessorios">Acessórios</a>
-            <a href="/promocoes">Promoções</a>
-        </nav>
+<div class="container header-content">
 
-        <div class="header-actions">
-            <% if (locals.session && session.userId) { %>
-                <div class="user-greeting">
-                    Olá, <%= session.userName.split(' ')[0] %>!
-                </div>
-                <a href="/logout" aria-label="Sair">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </a>
-            <% } else { %>
-                <a href="/login" aria-label="Minha Conta">
-                    <i class="fa-solid fa-user"></i>
-                </a>
-            <% } %>
-            <a href="/carrinho" aria-label="Carrinho de Compras"><i class="fa-solid fa-cart-shopping"></i></a>
-            
-            <div class="theme-switch-wrapper">
-                <label class="theme-switch" for="theme-checkbox">
-                    <input type="checkbox" id="theme-checkbox" />
-                    <div class="slider round">
-                        <i class="fa-solid fa-moon"></i>
-                        <i class="fa-solid fa-sun"></i>
-                    </div>
-                </label>
+    <% const isAdmin = (locals.session && session.isAdmin && session.pinValidated); %>
+
+    <a href="<%= isAdmin ? '/admin' : '/' %>" class="logo">RS<span>CardStore</span></a>
+
+    <% if (isAdmin) { %>
+      <!--  HEADER VARIANTE DO ADMIN: sem menu de categorias e sem ícones de usuário ====== -->
+      <nav class="main-nav"></nav>
+
+      <div class="header-actions">
+        <span class="admin-chip" title="Sessão administrativa">Admin</span>
+
+        <a href="/admin/logout" title="Sair">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </a>
+
+        <div class="theme-switch-wrapper">
+          <label class="theme-switch" for="theme-checkbox">
+            <input type="checkbox" id="theme-checkbox" />
+            <div class="slider round">
+              <i class="fa-solid fa-moon"></i>
+              <i class="fa-solid fa-sun"></i>
             </div>
+          </label>
         </div>
-    </div>
+      </div>
+    <% } else { %>
+      <nav class="main-nav">
+        <a href="/magic">Magic: The Gathering</a>
+        <a href="/yugioh">Yu-Gi-Oh!</a>
+        <a href="/pokemon">Pokémon TCG</a>
+        <a href="/acessorios">Acessórios</a>
+        <a href="/promocoes">Promoções</a>
+      </nav>
+
+      <div class="header-actions">
+        <% if (locals.session && session.userId) { %>
+          <div class="user-greeting">Olá, <%= session.userName.split(' ')[0] %>!</div>
+          <a href="/logout" title="Sair">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </a>
+        <% } else { %>
+          <a href="/login" aria-label="Minha Conta"><i class="fa-solid fa-user"></i></a>
+        <% } %>
+
+        <a href="/carrinho" aria-label="Carrinho de Compras">
+          <i class="fa-solid fa-cart-shopping"></i>
+        </a>
+
+        <div class="theme-switch-wrapper">
+          <label class="theme-switch" for="theme-checkbox">
+            <input type="checkbox" id="theme-checkbox" />
+            <div class="slider round">
+              <i class="fa-solid fa-moon"></i>
+              <i class="fa-solid fa-sun"></i>
+            </div>
+          </label>
+        </div>
+      </div>
+    <% } %>
+  </div>
 </header>
