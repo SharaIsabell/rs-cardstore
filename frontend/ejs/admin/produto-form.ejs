@@ -7,101 +7,245 @@
   <link rel="stylesheet" href="/css/index.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
-    .form-container { max-width: 800px; margin: 20px 0; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
-    .form-group input, .form-group textarea, .form-group select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
+    :root {
+        --theme-transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+        /* MODO CLARO (Padrão) */
+        --admin-bg: #F4F4F9;
+        --admin-card-bg: #FFFFFF;
+        --admin-card-border: #E5E7EB;
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #6B7280;
+        --input-bg: #F9FAFB;
+        --input-border: #D1D5DB;
+        --input-focus-border: var(--color-orange-vibrant);
+        --fieldset-border: #E5E7EB;
     }
-    .form-group textarea { min-height: 120px; resize: vertical; }
-    .form-group-checkbox { display: flex; align-items: center; gap: 10px; }
-    .form-group-checkbox input { width: auto; }
-    .form-actions { margin-top: 20px; }
+    body.dark-mode {
+        /* MODO ESCURO */
+        --admin-bg: #0D1B2A;
+        --admin-card-bg: #1B263B;
+        --admin-card-border: #374151;
+        --admin-text-primary: #FFFFFF;
+        --admin-text-secondary: #9CA3AF;
+        --input-bg: #2b3952;
+        --input-border: #4B5563;
+        --fieldset-border: #374151;
+    }
+
+    body {
+        background-color: var(--admin-bg);
+        transition: var(--theme-transition);
+    }
+    .section-title { color: var(--admin-text-primary); }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--admin-card-border);
+        margin-bottom: 2rem;
+    }
+    
+    .back-link {
+        color: var(--admin-text-secondary);
+        text-decoration: none;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: color 0.2s ease;
+    }
+    .back-link:hover { color: var(--color-orange-vibrant); }
+
+    /* --- Card do Formulário --- */
+    .form-card {
+        max-width: 900px;
+        margin: 0 auto;
+        background-color: var(--admin-card-bg);
+        border: 1px solid var(--admin-card-border);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        overflow: hidden; 
+    }
+    
+    .form-card form {
+        padding: 2.5rem;
+    }
+
+    /* --- Seções do Formulário --- */
+    .form-section {
+        border: none;
+        padding: 0;
+        margin: 0 0 2rem 0;
+        border-left: 4px solid var(--color-orange-vibrant);
+        padding-left: 1.5rem;
+    }
+    .form-section:last-of-type {
+        margin-bottom: 0;
+    }
+
+    .form-section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--admin-text-primary);
+        margin: 0 0 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .form-section-title i {
+        color: var(--color-orange-vibrant);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* --- Estilos dos Campos do Formulário --- */
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { margin-bottom: 8px; font-weight: 600; color: var(--admin-text-secondary); font-size: 0.9rem; }
+    .form-group input[type="text"], .form-group input[type="number"], .form-group textarea, .form-group select {
+        width: 100%; padding: 12px; border: 1px solid var(--input-border); border-radius: 8px; background-color: var(--input-bg);
+        color: var(--admin-text-primary); font-size: 1rem; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+        outline: none; border-color: var(--input-focus-border); box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.25);
+    }
+    .form-group textarea { min-height: 150px; resize: vertical; }
+    
+    /* Checkboxes */
+    .checkbox-container { display: flex; flex-direction: column; gap: 1rem; }
+    .form-group-checkbox { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .form-group-checkbox input[type="checkbox"] { display: none; }
+    .form-group-checkbox .checkbox-label { color: var(--admin-text-primary); font-weight: 500; }
+    .form-group-checkbox .checkbox-custom { width: 20px; height: 20px; border: 2px solid var(--input-border); border-radius: 5px; display: inline-block; position: relative; transition: background-color 0.2s ease, border-color 0.2s ease; }
+    .form-group-checkbox .checkbox-custom::after { content: ''; position: absolute; left: 6px; top: 2px; width: 5px; height: 10px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); opacity: 0; transition: opacity 0.2s ease; }
+    .form-group-checkbox input:checked ~ .checkbox-custom { background-color: var(--color-orange-vibrant); border-color: var(--color-orange-vibrant); }
+    .form-group-checkbox input:checked ~ .checkbox-custom::after { opacity: 1; }
+
+    /* --- Ações do Formulário (Rodapé do Card) --- */
+    .form-actions {
+        margin-top: 2rem;
+        padding: 1.5rem 2.5rem;
+        background-color: var(--admin-table-header-bg, var(--admin-bg)); 
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+        border-top: 1px solid var(--admin-card-border);
+    }
+    .submit-btn, .cancel-link {
+        padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer;
+        font-size: 1rem; font-weight: 700; text-decoration: none; transition: all 0.2s ease;
+    }
     .submit-btn {
-      padding: 12px 20px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
+        color: white;
+        background: linear-gradient(45deg, var(--color-orange-vibrant), #ff7e5f);
+        box-shadow: 0 4px 15px rgba(255, 159, 28, 0.3);
     }
-    .cancel-link { margin-left: 15px; text-decoration: none; }
+    .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 159, 28, 0.4); }
+    .cancel-link { background-color: transparent; color: var(--admin-text-secondary); }
+    .cancel-link:hover { background-color: var(--admin-card-border); color: var(--admin-text-primary); }
   </style>
 </head>
 <body>
   <%- include('../partials/header') %>
 
   <main class="container section">
-    <h1 class="section-title"><%= pageTitle %></h1>
+    <div class="page-header">
+      <h1 class="section-title" style="margin: 0;"><%= pageTitle %></h1>
+      <a href="/admin/produtos" class="back-link"><i class="fas fa-chevron-left"></i> Voltar para a lista</a>
+    </div>
     
-    <div class="form-container">
+    <div class="form-card">
       <form action="<%= action %>" method="POST">
-        <div class="form-group">
-          <label for="nome">Nome do Produto</label>
-          <input type="text" id="nome" name="nome" value="<%= produto ? produto.nome : '' %>" required>
-        </div>
         
-        <div class="form-group">
-          <label for="descricao">Descrição</label>
-          <textarea id="descricao" name="descricao" required><%= produto ? produto.descricao : '' %></textarea>
-        </div>
+        <fieldset class="form-section">
+          <legend class="form-section-title"><i class="fas fa-info-circle"></i>Informações Principais</legend>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="nome">Nome do Produto</label>
+              <input type="text" id="nome" name="nome" value="<%= produto ? produto.nome : '' %>" required>
+            </div>
+            <div class="form-group full-width">
+              <label for="descricao">Descrição</label>
+              <textarea id="descricao" name="descricao" required><%= produto ? produto.descricao : '' %></textarea>
+            </div>
+          </div>
+        </fieldset>
 
-        <div class="form-group">
-          <label for="categoria">Categoria</label>
-          <select id="categoria" name="categoria" required>
-            <% const categories = ['Magic', 'Yu-Gi-Oh', 'Pokemon', 'Acessorios']; %>
-            <% categories.forEach(cat => { %>
-              <option value="<%= cat %>" <%= (produto && produto.categoria === cat) ? 'selected' : '' %>>
-                <%= cat %>
-              </option>
-            <% }) %>
-          </select>
-        </div>
+        <fieldset class="form-section">
+            <legend class="form-section-title"><i class="fas fa-boxes"></i>Catálogo e Estoque</legend>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="categoria">Categoria</label>
+                <select id="categoria" name="categoria" required>
+                  <% const categories = ['Magic', 'Yu-Gi-Oh', 'Pokemon', 'Acessorios']; %>
+                  <% categories.forEach(cat => { %>
+                    <option value="<%= cat %>" <%= (produto && produto.categoria === cat) ? 'selected' : '' %>><%= cat %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="estoque">Quantidade em Estoque</label>
+                <input type="number" id="estoque" name="estoque" value="<%= produto ? produto.estoque : '0' %>" required>
+              </div>
+            </div>
+        </fieldset>
 
-        <div class="form-group">
-          <label for="preco">Preço (R$)</label>
-          <input type="number" id="preco" name="preco" step="0.01" value="<%= produto ? produto.preco : '' %>" required>
-        </div>
+        <fieldset class="form-section">
+            <legend class="form-section-title"><i class="fas fa-dollar-sign"></i>Valores e Preços</legend>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="preco">Preço (R$)</label>
+                <input type="number" id="preco" name="preco" step="0.01" value="<%= produto ? produto.preco : '' %>" required>
+              </div>
+              <div class="form-group">
+                <label for="desconto_percentual">Desconto (%)</label>
+                <input type="number" id="desconto_percentual" name="desconto_percentual" step="0.01" value="<%= produto ? produto.desconto_percentual : '0' %>">
+              </div>
+            </div>
+        </fieldset>
 
-        <div class="form-group">
-          <label for="desconto_percentual">Desconto (%)</label>
-          <input type="number" id="desconto_percentual" name="desconto_percentual" step="0.01" value="<%= produto ? produto.desconto_percentual : '0' %>">
-        </div>
+        <fieldset class="form-section">
+            <legend class="form-section-title"><i class="fas fa-image"></i>Mídia</legend>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label for="imagem_url">URL da Imagem</label>
+                    <input type="text" id="imagem_url" name="imagem_url" value="<%= produto ? produto.imagem_url : '' %>">
+                </div>
+            </div>
+        </fieldset>
 
-        <div class="form-group">
-          <label for="estoque">Quantidade em Estoque</label>
-          <input type="number" id="estoque" name="estoque" value="<%= produto ? produto.estoque : '0' %>" required>
-        </div>
-
-        <div class="form-group">
-          <label for="imagem_url">URL da Imagem</label>
-          <input type="text" id="imagem_url" name="imagem_url" value="<%= produto ? produto.imagem_url : '' %>">
-        </div>
-
-        <div class="form-group-checkbox">
-          <input type="checkbox" id="promocao" name="promocao" <%= (produto && produto.promocao) ? 'checked' : '' %>>
-          <label for="promocao">Marcar como Promoção</label>
-        </div>
+        <fieldset class="form-section">
+            <legend class="form-section-title"><i class="fas fa-tags"></i>Outros</legend>
+            <div class="checkbox-container">
+              <label class="form-group-checkbox">
+                <input type="checkbox" id="promocao" name="promocao" <%= (produto && produto.promocao) ? 'checked' : '' %>>
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-label">Marcar como Promoção</span>
+              </label>
+              <label class="form-group-checkbox">
+                <input type="checkbox" id="novo" name="novo" <%= (produto && produto.novo) ? 'checked' : '' %>>
+                <span class="checkbox-custom"></span>
+                <span class="checkbox-label">Marcar como Produto Novo</span>
+              </label>
+            </div>
+        </fieldset>
         
-        <div class="form-group-checkbox">
-          <input type="checkbox" id="novo" name="novo" <%= (produto && produto.novo) ? 'checked' : '' %>>
-          <label for="novo">Marcar como Produto Novo</label>
-        </div>
-
         <div class="form-actions">
-          <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Salvar</button>
           <a href="/admin/produtos" class="cancel-link">Cancelar</a>
+          <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Salvar Alterações</button>
         </div>
       </form>
     </div>
-
-    <section style="height: 20vh;"></section>
   </main>
 
   <%- include('../partials/footer') %>
+  <script src="/js/theme.js" defer></script>
 </body>
 </html>

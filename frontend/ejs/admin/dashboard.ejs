@@ -7,40 +7,197 @@
   <link rel="stylesheet" href="/css/index.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
-    .admin-menu a {
-        display: block;
-        padding: 15px;
-        margin: 10px 0;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
+    :root {
+        --theme-transition: background-color 0.4s ease, color 0.4s ease;
+        /* MODO CLARO */
+        --admin-bg: #F4F4F9;
+        --admin-card-bg: linear-gradient(145deg, #FFFFFF, #F9FAFB);
+        --admin-card-border: #DEE2E6;
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #4B5563;
+        --admin-welcome-strong: #D97706;
+        --danger-color: #DC2626;
+        --warning-color: #D97706;
+    }
+    /* MODO ESCURO */
+    body.dark-mode {
+        --admin-bg: #0D1B2A;
+        --admin-card-bg: linear-gradient(145deg, #1B263B, #0D1B2A);
+        --admin-card-border: #2a3b52;
+        --admin-text-primary: #FFFFFF;
+        --admin-text-secondary: #E0E1E2;
+        --admin-welcome-strong: var(--color-orange-vibrant);
+        --danger-color: #F87171;
+        --warning-color: #FBBF24;
+    }
+
+    /* Estilos Gerais */
+    body { background-color: var(--admin-bg); color: var(--admin-text-secondary); transition: var(--theme-transition); }
+    .section-title { color: var(--admin-text-primary); }
+    .welcome-message { text-align: center; margin-bottom: 2rem; font-size: 1.1rem; }
+    .welcome-message strong { color: var(--admin-welcome-strong); }
+    .admin-theme-switcher { display: flex; justify-content: center; margin-bottom: 2rem; }
+
+    /* Grid de Cards de Menu */
+    .admin-menu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 30px;
+        margin-top: 2rem;
+    }
+    .admin-card {
+        background: var(--admin-card-bg); border: 1px solid var(--admin-card-border); border-radius: 15px; padding: 2rem;
+        text-decoration: none; color: var(--admin-text-secondary);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.4s ease;
+        position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.05);
+    }
+    .admin-card:before {
+        content: ''; position: absolute; top: -50px; right: -50px; width: 150px; height: 150px;
+        background-color: var(--accent-color); border-radius: 50%; opacity: 0.1; transition: transform 0.4s ease;
+    }
+    .admin-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1); border-color: var(--accent-color); }
+    .admin-card:hover:before { transform: scale(1.5); }
+    .admin-card .card-icon { font-size: 3.5rem; margin-bottom: 1.5rem; color: var(--accent-color); }
+    .admin-card .card-title { font-family: var(--font-heading); font-size: 1.5rem; color: var(--admin-text-primary); margin-bottom: 0.5rem; }
+    .admin-card.produtos { --accent-color: #FF9F1C; }
+    .admin-card.relatorios { --accent-color: #3A86FF; }
+    .admin-card.pedidos { --accent-color: #33D17A; }
+
+    .stock-notifications-container {
+      margin-top: 3rem; 
+    }
+    .stock-notifications {
+        background-color: var(--admin-card-bg);
+        border: 1px solid var(--admin-card-border);
+        border-left: 5px solid var(--danger-color); 
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+    }
+    .notifications-title {
+        font-size: 1.25rem;
+        color: var(--admin-text-primary);
+        margin: 0 0 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .notifications-title .count-badge {
+        background-color: var(--danger-color);
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 99px;
+    }
+
+    .notification-list { list-style: none; padding: 0; margin: 0; }
+    .notification-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto; /* Colunas para ícone, info e botão */
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid var(--admin-card-border);
+    }
+    .notification-item:last-child { border-bottom: none; padding-bottom: 0; }
+    
+    .notification-item .stock-indicator {
+        font-size: 1.2rem;
+    }
+    .notification-item.out-of-stock .stock-indicator { color: var(--danger-color); }
+    .notification-item.low-stock .stock-indicator { color: var(--warning-color); }
+    
+    .notification-item .item-info { display: flex; flex-direction: column; }
+    .notification-item .product-name { font-weight: 600; color: var(--admin-text-primary); }
+    .notification-item .stock-alert { font-size: 0.9rem; font-weight: 500; }
+    .notification-item.out-of-stock .stock-alert { color: var(--danger-color); }
+    .notification-item.low-stock .stock-alert { color: var(--warning-color); }
+
+    .notification-item .btn-manage-stock {
+        padding: 6px 12px;
+        background-color: transparent;
+        border: 1px solid var(--admin-card-border);
+        color: var(--admin-text-secondary);
         text-decoration: none;
-        color: #212529;
-        border-radius: 5px;
-        transition: background-color 0.2s;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        transition: all 0.2s ease;
     }
-    .admin-menu a:hover {
-        background-color: #e9ecef;
+    .notification-item .btn-manage-stock:hover {
+        background-color: var(--color-orange-vibrant);
+        border-color: var(--color-orange-vibrant);
+        color: white;
     }
+
   </style>
 </head>
+<%- include('../partials/header') %>
 <body>
-  <%- include('../partials/header') %>
+  <%
+    // DADO DE EXEMPLO: Em uma aplicação real, esta variável viria do seu controller/rota.
+    const notificacoesEstoque = [
+      { id: 103, nome: 'Shield Pro-Fit Transparente', estoque: 0 },
+      { id: 102, nome: 'Deck Commander Masters', estoque: 1 },
+      { id: 101, nome: 'Booster Coleção O Senhor dos Anéis', estoque: 3 },
+    ];
+  %>
 
   <main class="container section">
     <h1 class="section-title">Painel do Administrador</h1>
-
-    <p>Bem-vindo, <strong><%= adminEmail %></strong>.</p>
-
-    <nav class="admin-menu">
-      <h2>Menu de Gerenciamento</h2>
-      <a href="/admin/produtos">
-          <i class="fas fa-box-open"></i> Gerenciar Produtos
+    <p class="welcome-message">Bem-vindo, <strong><%= adminEmail %></strong>. Selecione uma opção para começar.</p>
+    
+    <div class="admin-menu-grid">
+      <a href="/admin/produtos" class="admin-card produtos">
+        <div class="card-icon"><i class="fas fa-box-open"></i></div>
+        <h3 class="card-title">Produtos</h3>
+        <p class="card-description">Adicione, edite e remova produtos do seu catálogo.</p>
       </a>
-    </nav>
+      <a href="#" class="admin-card relatorios">
+        <div class="card-icon"><i class="fas fa-chart-line"></i></div>
+        <h3 class="card-title">Relatórios</h3>
+        <p class="card-description">Gere relatórios de vendas, estoque e desempenho.</p>
+      </a>
+      <a href="#" class="admin-card pedidos">
+        <div class="card-icon"><i class="fas fa-receipt"></i></div>
+        <h3 class="card-title">Pedidos</h3>
+        <p class="card-description">Acompanhe e administre as vendas realizadas.</p>
+      </a>
+    </div>
 
-    <section style="height: 40vh;"></section>
+    <% if (typeof notificacoesEstoque !== 'undefined' && notificacoesEstoque.length > 0) { %>
+      <div class="stock-notifications-container">
+        <div class="stock-notifications">
+          <h2 class="notifications-title">
+            <i class="fas fa-bell"></i>
+            <span>Notificações de Estoque</span>
+            <span class="count-badge"><%= notificacoesEstoque.length %></span>
+          </h2>
+          <ul class="notification-list">
+            <% notificacoesEstoque.forEach(produto => { %>
+              <li class="notification-item <%= produto.estoque === 0 ? 'out-of-stock' : 'low-stock' %>">
+                <div class="stock-indicator">
+                  <i class="fas <%= produto.estoque === 0 ? 'fa-circle-xmark' : 'fa-triangle-exclamation' %>"></i>
+                </div>
+                <div class="item-info">
+                  <span class="product-name"><%= produto.nome %></span>
+                  <span class="stock-alert">
+                    <%= produto.estoque === 0 ? 'Produto esgotado!' : `Apenas ${produto.estoque} em estoque!` %>
+                  </span>
+                </div>
+                <a href="/admin/produtos/editar/<%= produto.id %>" class="btn-manage-stock">Gerenciar</a>
+              </li>
+            <% }) %>
+          </ul>
+        </div>
+      </div>
+    <% } %>
+
   </main>
-
   <%- include('../partials/footer') %>
+  <script src="/js/theme.js" defer></script>
 </body>
 </html>

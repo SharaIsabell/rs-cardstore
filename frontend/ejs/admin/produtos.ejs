@@ -7,95 +7,230 @@
   <link rel="stylesheet" href="/css/index.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
   <style>
-    .product-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    .product-table th, .product-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    .product-table th { background-color: #f2f2f2; }
-    .product-table .actions { display: flex; gap: 10px; }
-    .actions a, .actions button {
-      padding: 5px 10px;
-      border-radius: 5px;
-      text-decoration: none;
-      color: white;
-      border: none;
-      cursor: pointer;
+    :root {
+        --theme-transition: background-color 0.4s ease, color 0.4s ease;
+        /* MODO CLARO (Padrão) */
+        --admin-bg: #F4F4F9;
+        --admin-card-bg: #FFFFFF;
+        --admin-card-border: #E5E7EB;
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #6B7280;
+        --admin-table-header-bg: #F9FAFB;
+        --admin-table-row-hover: #F3F4F6;
+        --success-bg: #D1FAE5;
+        --success-text: #065F46;
+        --success-border: #A7F3D0;
     }
-    .actions .edit-btn { background-color: #007bff; }
-    .actions .delete-btn { background-color: #dc3545; }
+    body.dark-mode {
+        /* MODO ESCURO */
+        --admin-bg: #0D1B2A;
+        --admin-card-bg: #1B263B;
+        --admin-card-border: #374151;
+        --admin-text-primary: #FFFFFF;
+        --admin-text-secondary: #9CA3AF;
+        --admin-table-header-bg: #1f2937;
+        --admin-table-row-hover: #2c3a50;
+        --success-bg: #064E3B;
+        --success-text: #A7F3D0;
+        --success-border: #059669;
+    }
+
+    /* --- Estilos Gerais da Página --- */
+    body {
+        background-color: var(--admin-bg);
+        color: var(--admin-text-secondary);
+        transition: var(--theme-transition);
+    }
+    .section-title, .welcome-text strong {
+        color: var(--admin-text-primary);
+    }
+
+    /* --- Botão Voltar --- */
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        text-decoration: none;
+        color: var(--admin-text-secondary);
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+    .back-link:hover {
+        color: var(--color-orange-vibrant);
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
     .add-product-btn {
-        display: inline-block;
-        margin: 20px 0;
-        padding: 10px 15px;
-        background-color: #28a745;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 12px 20px;
+        background-color: var(--color-orange-vibrant);
         color: white;
         text-decoration: none;
-        border-radius: 5px;
+        border-radius: 8px; 
+        font-weight: 700;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
+    .add-product-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* --- Alerta de Mensagem --- */
     .alert {
-        padding: 15px;
-        margin-bottom: 20px;
-        border: 1px solid transparent;
-        border-radius: 4px;
-        background-color: #d4edda;
-        color: #155724;
+        padding: 1rem; 
+        margin-bottom: 2rem;
+        border: 1px solid var(--success-border); 
+        border-radius: 8px;
+        background-color: var(--success-bg);
+        color: var(--success-text);
+        font-weight: 500;
     }
+
+    /* --- Container da Tabela --- */
+    .table-container {
+        background-color: var(--admin-card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+        overflow-x: auto; 
+    }
+
+    .product-table {
+        width: 100%;
+        border-collapse: collapse; 
+    }
+
+    .product-table th, .product-table td {
+        padding: 16px;
+        text-align: left; 
+        border-bottom: 1px solid var(--admin-card-border);
+    }
+    
+    .product-table th {
+        background-color: var(--admin-table-header-bg);
+        color: var(--admin-text-secondary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .product-table tbody tr {
+        transition: background-color 0.2s ease;
+    }
+
+    .product-table tbody tr:hover {
+        background-color: var(--admin-table-row-hover);
+    }
+
+    .product-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .product-table .product-name {
+        font-weight: 600;
+        color: var(--admin-text-primary);
+    }
+
+    /* --- Botões de Ação na Tabela --- */
+    .actions {
+        display: flex;
+        gap: 15px; 
+    }
+    .actions a, .actions button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        font-size: 1.1rem;
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .actions a:hover, .actions button:hover {
+        transform: scale(1.2);
+    }
+
+    .actions .edit-btn { color: #3b82f6; }
+    .actions .edit-btn:hover { color: #60a5fa; }
+
+    .actions .delete-btn { color: #ef4444; }
+    .actions .delete-btn:hover { color: #f87171; }
   </style>
 </head>
 <body>
   <%- include('../partials/header') %>
 
   <main class="container section">
-    <h1 class="section-title">Gerenciamento de Produtos</h1>
-    <p>Bem-vindo, <strong><%= adminEmail %></strong>.</p>
 
-    <a href="/admin/produtos/novo" class="add-product-btn"><i class="fas fa-plus"></i> Adicionar Novo Produto</a>
+    <a href="/admin" class="back-link"><i class="fas fa-chevron-left"></i> Voltar ao Painel</a>
+
+    <div class="page-header">
+      <div>
+        <h1 class="section-title" style="margin: 0;">Gerenciamento de Produtos</h1>
+        <p class="welcome-text" style="margin: 0;">Bem-vindo, <strong><%= adminEmail %></strong>.</p>
+      </div>
+      <a href="/admin/produtos/novo" class="add-product-btn"><i class="fas fa-plus"></i> Adicionar Produto</a>
+    </div>
 
     <% if (message) { %>
       <div class="alert"><%= message %></div>
     <% } %>
 
-    <table class="product-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nome</th>
-          <th>Categoria</th>
-          <th>Preço</th>
-          <th>Estoque</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% if (produtos.length > 0) { %>
-          <% produtos.forEach(produto => { %>
+    <div class="table-container">
+        <table class="product-table">
+        <thead>
             <tr>
-              <td><%= produto.id %></td>
-              <td><%= produto.nome %></td>
-              <td><%= produto.categoria %></td>
-              <td>R$ <%= Number(produto.preco).toFixed(2).replace('.', ',') %></td>
-              <td><%= produto.estoque %></td>
-              <td class="actions">
-                <a href="/admin/produtos/editar/<%= produto.id %>" class="edit-btn">
-                  <i class="fas fa-edit"></i> Editar
-                </a>
-                <form action="/admin/produtos/remover/<%= produto.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja remover este produto?');">
-                  <button type="submit" class="delete-btn">
-                    <i class="fas fa-trash"></i> Remover
-                  </button>
-                </form>
-              </td>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Categoria</th>
+            <th>Preço</th>
+            <th>Estoque</th>
+            <th>Ações</th>
             </tr>
-          <% }) %>
-        <% } else { %>
-          <tr>
-            <td colspan="6">Nenhum produto cadastrado.</td>
-          </tr>
-        <% } %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+            <% if (produtos.length > 0) { %>
+            <% produtos.forEach(produto => { %>
+                <tr>
+                <td><%= produto.id %></td>
+                <td class="product-name"><%= produto.nome %></td>
+                <td><%= produto.categoria %></td>
+                <td>R$ <%= Number(produto.preco).toFixed(2).replace('.', ',') %></td>
+                <td><%= produto.estoque %></td>
+                <td class="actions">
+                    <a href="/admin/produtos/editar/<%= produto.id %>" class="edit-btn" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    <form action="/admin/produtos/remover/<%= produto.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja remover este produto?');" style="display: inline;">
+                    <button type="submit" class="delete-btn" title="Remover">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    </form>
+                </td>
+                </tr>
+            <% }) %>
+            <% } else { %>
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 3rem;">Nenhum produto cadastrado.</td>
+            </tr>
+            <% } %>
+        </tbody>
+        </table>
+    </div>
 
-    <section style="height: 20vh;"></section>
   </main>
 
   <%- include('../partials/footer') %>
+
+  <script src="/js/theme.js" defer></script>
 </body>
 </html>
