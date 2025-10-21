@@ -6,14 +6,38 @@
   <title>Admin • RS Card Store</title>
   <link rel="stylesheet" href="/css/index.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    .admin-menu a {
+        display: block;
+        padding: 15px;
+        margin: 10px 0;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        text-decoration: none;
+        color: #212529;
+        border-radius: 5px;
+        transition: background-color 0.2s;
+    }
+    .admin-menu a:hover {
+        background-color: #e9ecef;
+    }
+  </style>
 </head>
 <body>
   <%- include('../partials/header') %>
 
   <main class="container section">
     <h1 class="section-title">Painel do Administrador</h1>
+
     <p>Bem-vindo, <strong><%= adminEmail %></strong>.</p>
-        <!-- Espaço em branco para evitar o vazio sob o footer -->
+
+    <nav class="admin-menu">
+      <h2>Menu de Gerenciamento</h2>
+      <a href="/admin/produtos">
+          <i class="fas fa-box-open"></i> Gerenciar Produtos
+      </a>
+    </nav>
+
     <section style="height: 40vh;"></section>
   </main>
 

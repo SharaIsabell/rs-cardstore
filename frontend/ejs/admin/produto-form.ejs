@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title><%= pageTitle %> • RS Card Store</title>
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    .form-container { max-width: 800px; margin: 20px 0; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .form-group textarea { min-height: 120px; resize: vertical; }
+    .form-group-checkbox { display: flex; align-items: center; gap: 10px; }
+    .form-group-checkbox input { width: auto; }
+    .form-actions { margin-top: 20px; }
+    .submit-btn {
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .cancel-link { margin-left: 15px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <main class="container section">
+    <h1 class="section-title"><%= pageTitle %></h1>
+    
+    <div class="form-container">
+      <form action="<%= action %>" method="POST">
+        <div class="form-group">
+          <label for="nome">Nome do Produto</label>
+          <input type="text" id="nome" name="nome" value="<%= produto ? produto.nome : '' %>" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="descricao">Descrição</label>
+          <textarea id="descricao" name="descricao" required><%= produto ? produto.descricao : '' %></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="categoria">Categoria</label>
+          <select id="categoria" name="categoria" required>
+            <% const categories = ['Magic', 'Yu-Gi-Oh', 'Pokemon', 'Acessorios']; %>
+            <% categories.forEach(cat => { %>
+              <option value="<%= cat %>" <%= (produto && produto.categoria === cat) ? 'selected' : '' %>>
+                <%= cat %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="preco">Preço (R$)</label>
+          <input type="number" id="preco" name="preco" step="0.01" value="<%= produto ? produto.preco : '' %>" required>
+        </div>
+
+        <div class="form-group">
+          <label for="desconto_percentual">Desconto (%)</label>
+          <input type="number" id="desconto_percentual" name="desconto_percentual" step="0.01" value="<%= produto ? produto.desconto_percentual : '0' %>">
+        </div>
+
+        <div class="form-group">
+          <label for="estoque">Quantidade em Estoque</label>
+          <input type="number" id="estoque" name="estoque" value="<%= produto ? produto.estoque : '0' %>" required>
+        </div>
+
+        <div class="form-group">
+          <label for="imagem_url">URL da Imagem</label>
+          <input type="text" id="imagem_url" name="imagem_url" value="<%= produto ? produto.imagem_url : '' %>">
+        </div>
+
+        <div class="form-group-checkbox">
+          <input type="checkbox" id="promocao" name="promocao" <%= (produto && produto.promocao) ? 'checked' : '' %>>
+          <label for="promocao">Marcar como Promoção</label>
+        </div>
+        
+        <div class="form-group-checkbox">
+          <input type="checkbox" id="novo" name="novo" <%= (produto && produto.novo) ? 'checked' : '' %>>
+          <label for="novo">Marcar como Produto Novo</label>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Salvar</button>
+          <a href="/admin/produtos" class="cancel-link">Cancelar</a>
+        </div>
+      </form>
+    </div>
+
+    <section style="height: 20vh;"></section>
+  </main>
+
+  <%- include('../partials/footer') %>
+</body>
+</html>

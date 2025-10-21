@@ -3,6 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../database/pooldb');
 
+// novo roteador
+const { produtosAdminRouter } = require('./produtos-admin'); 
+
 function requireAdminLogin(req, res, next) {
   if (!(req.session && req.session.isAdmin)) {
     return res.redirect('/admin/login');
@@ -75,7 +78,7 @@ router.post('/login', async (req, res) => {
 // Tela do PIN
 router.get('/pin', requireAdminLogin, (req, res) => {
   const pin = req.session.adminPin || generatePin();
-  req.session.adminPin = pin; 
+  req.session.adminPin = pin; // garante que existe
   return res.render('admin/pin', {
     adminEmail: req.session.adminEmail,
     pin,
@@ -110,7 +113,6 @@ router.get('/', requireAdminPin, (req, res) => {
 // Logout do admin
 router.get('/logout', (req, res) => {
   if (req.session) {
-
     req.session.isAdmin = false;
     req.session.pinValidated = false;
     delete req.session.adminId;
@@ -119,5 +121,8 @@ router.get('/logout', (req, res) => {
   }
   return res.redirect('/login');
 });
+
+// Use o roteador de produtos sob o prefixo /admin/produtos
+router.use('/produtos', produtosAdminRouter);
 
 module.exports = { adminRouter: router };
