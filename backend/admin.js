@@ -143,6 +143,62 @@ router.get('/logout', (req, res) => {
   return res.redirect('/login');
 });
 
+//Rota pra quando for preciso o admin repor o estoque ou algo do tipo
+router.post('/produtos/:id/repor', requireAdminPin, async (req, res) => {
+  try {
+    const produtoId = parseInt(req.params.id, 10);
+    const qtd = parseInt(req.body.quantidade, 10);
+    const LOW = 5;
+
+    if (!Number.isInteger(produtoId) || produtoId <= 0) {
+      return res.status(400).send('Produto inválido.');
+    }
+    if (!Number.isInteger(qtd) || qtd <= 0) {
+      return res.status(400).send('Quantidade inválida.');
+    }
+
+    // Transação para calcular novo estoque e ajustar flags
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [[cur]] = await conn.query(
+        'SELECT estoque FROM produtos WHERE id = ? FOR UPDATE',
+        [produtoId]
+      );
+      if (!cur) {
+        await conn.rollback();
+        return res.status(404).send('Produto não encontrado.');
+      }
+
+      const novoEstoque = Math.max(0, Number(cur.estoque) + qtd);
+
+      await conn.query(
+        `UPDATE produtos
+            SET estoque = ?,
+                -- se voltou a ter estoque, zera OUT
+                out_of_stock_notified = CASE WHEN ? > 0 THEN 0 ELSE out_of_stock_notified END,
+                -- se ultrapassou o LOW, zera LOW; se ficou entre 1..LOW, zera LOW p/ permitir novo alerta se cair/oscilar
+                low_stock_notified = 0
+          WHERE id = ?`,
+        [novoEstoque, novoEstoque, produtoId]
+      );
+
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+
+    return res.redirect('/admin');
+  } catch (e) {
+    console.error('[admin] falha ao repor estoque:', e);
+    return res.status(500).send('Erro ao repor estoque.');
+  }
+});
+
 // Use o roteador de produtos sob o prefixo /admin/produtos
 router.use('/produtos', produtosAdminRouter);
 

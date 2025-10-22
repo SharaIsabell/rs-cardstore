@@ -4,7 +4,8 @@ const db = require('../database/pooldb');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const { enviarEmailVerificacao, enviarEmailEstoqueBaixo } = require('../frontend/js/enviarEmail');const session = require('express-session');
+const { enviarEmailVerificacao, enviarEmailAlertaEstoque } = require('../frontend/js/enviarEmail');
+const session = require('express-session');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const { v4: uuidv4 } = require('uuid');
@@ -460,11 +461,22 @@ router.post('/process_payment', async (req, res) => {
                   await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
                   
                   for (const item of items) {
-                      await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
-                      const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
-                      if (updatedProduct.estoque <= 5 && (updatedProduct.estoque + item.quantidade) > 5) {
-                          await enviarEmailEstoqueBaixo(updatedProduct);
-                      }
+                    await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
+                    const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
+                    const prevEstoque = updatedProduct.estoque + item.quantidade;
+
+                    // LOW: cruzou de >5 para 1..5
+                    if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
+                      await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
+                      await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                    }
+
+                    // OUT: chegou a 0
+                    if (updatedProduct.estoque === 0) {
+                      await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
+                      await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                      await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                    }
                   }
 
                   await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
@@ -786,7 +798,7 @@ router.get('/pedido/status/:id', async (req, res) => {
 router.post('/mercado-pago-webhook', async (req, res) => {
     console.log('--- NOVO WEBHOOK RECEBIDO ---');
     try {
-        const notification = JSON.parse(req.body);
+        const notification = JSON.parse(req.body.toString('utf8'));
         
         if (notification.type === 'payment' && notification.data && notification.data.id) {
             const paymentId = notification.data.id;
@@ -812,11 +824,22 @@ router.post('/mercado-pago-webhook', async (req, res) => {
 
                         const [items] = await connection.query('SELECT produto_id, quantidade FROM pedido_itens WHERE pedido_id = ?', [pedido_id]);
                         for (const item of items) {
-                            await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
-                            const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
-                            if (updatedProduct.estoque <= 5 && (updatedProduct.estoque + item.quantidade) > 5) {
-                                await enviarEmailEstoqueBaixo(updatedProduct);
-                            }
+                          await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
+                          const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
+                          const prevEstoque = updatedProduct.estoque + item.quantidade;
+
+                          // LOW: cruzou de >5 para 1..5
+                          if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
+                            await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
+                            await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                          }
+
+                          // OUT: chegou a 0 (sempre avisa)
+                          if (updatedProduct.estoque === 0) {
+                            await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
+                            await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                            await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                          }
                         }
 
                         await connection.commit();
