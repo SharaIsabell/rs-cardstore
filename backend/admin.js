@@ -106,8 +106,29 @@ router.post('/pin', requireAdminLogin, (req, res) => {
 });
 
 // Dashboard (somente admin com PIN validado)
-router.get('/', requireAdminPin, (req, res) => {
-  return res.render('admin/dashboard', { adminEmail: req.session.adminEmail });
+router.get('/', requireAdminPin, async (req, res) => {
+  try {
+    // Busca produtos com 5 ou menos unidades em estoque para exibir no painel
+    const [notificacoesEstoque] = await db.query(
+      `SELECT id, nome, estoque 
+         FROM produtos 
+        WHERE estoque <= 5 
+     ORDER BY estoque ASC, nome ASC`
+    );
+
+    return res.render('admin/dashboard', { 
+      adminEmail: req.session.adminEmail,
+      notificacoesEstoque: notificacoesEstoque // Passa a lista de produtos para o template
+    });
+
+  } catch (error) {
+    console.error("Erro ao carregar o dashboard do admin:", error);
+    // Em caso de erro, renderiza o dashboard sem as notificações para não quebrar a página
+    return res.render('admin/dashboard', { 
+      adminEmail: req.session.adminEmail,
+      notificacoesEstoque: [] 
+    });
+  }
 });
 
 // Logout do admin

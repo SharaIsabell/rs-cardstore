@@ -4,8 +4,7 @@ const db = require('../database/pooldb');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const { enviarEmailVerificacao } = require('../frontend/js/enviarEmail');
-const session = require('express-session');
+const { enviarEmailVerificacao, enviarEmailEstoqueBaixo } = require('../frontend/js/enviarEmail');const session = require('express-session');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const { v4: uuidv4 } = require('uuid');
@@ -427,7 +426,14 @@ router.post('/process_payment', async (req, res) => {
             FROM carrinho_itens ci JOIN produtos p ON ci.produto_id = p.id WHERE ci.carrinho_id = ?`,
             [carrinho_id]
         );
-        if (items.length === 0) throw new Error('Carrinho vazio.');
+
+        for (const item of items) {
+            const [[product]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ? FOR UPDATE', [item.produto_id]);
+            if (!product || product.estoque < item.quantidade) {
+                await connection.rollback();
+                return res.status(400).json({ success: false, message: `Estoque insuficiente para o produto: ${product.nome}.` });
+            }
+        }
 
         const subtotal = items.reduce((acc, item) => {
             const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
@@ -451,13 +457,22 @@ router.post('/process_payment', async (req, res) => {
 
                 if (paymentResult.status === 'approved') {
                     await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
-                    await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
-                    await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
-                    
-                    delete req.session.frete;
-                    delete req.session.endereco_entrega;
-                    await connection.commit();
-                    return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
+                  await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
+                  
+                  for (const item of items) {
+                      await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
+                      const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
+                      if (updatedProduct.estoque <= 5 && (updatedProduct.estoque + item.quantidade) > 5) {
+                          await enviarEmailEstoqueBaixo(updatedProduct);
+                      }
+                  }
+
+                  await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
+                  
+                  delete req.session.frete;
+                  delete req.session.endereco_entrega;
+                  await connection.commit();
+                  return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
                 } else {
                     await connection.rollback();
                     return res.status(400).json({ success: false, message: `Pagamento recusado: ${paymentResult.status_detail}`, status: paymentResult.status_detail });
@@ -767,49 +782,49 @@ router.get('/pedido/status/:id', async (req, res) => {
     }
 });
 
-// --- ROTA NOVA: Webhook para receber notificações do Mercado Pago ---
-// SUBSTITUA SUA ROTA DE WEBHOOK ANTIGA POR ESTA:
+// --- Webhook para receber notificações do Mercado Pago ---
 router.post('/mercado-pago-webhook', async (req, res) => {
     console.log('--- NOVO WEBHOOK RECEBIDO ---');
-
     try {
-        // LINHA CORRIGIDA: Converte o corpo bruto (Buffer) para JSON
         const notification = JSON.parse(req.body);
         
         if (notification.type === 'payment' && notification.data && notification.data.id) {
             const paymentId = notification.data.id;
-            console.log(`[LOG 1] Notificação de pagamento recebida. ID do Pagamento (mp_payment_id): ${paymentId}`);
 
             const paymentInfo = await payment.get({ id: paymentId });
-            console.log('[LOG 2] Informações do pagamento obtidas do MP:', { id: paymentInfo.id, status: paymentInfo.status });
 
-            if (paymentInfo && (paymentInfo.status === 'approved' || paymentInfo.status === 'pending')){
+            if (paymentInfo && paymentInfo.status === 'approved'){
                 const mp_payment_id = paymentInfo.id;
-
                 const connection = await db.getConnection();
                 try {
-                    console.log(`[LOG 3] Buscando no banco de dados pelo mp_payment_id: ${mp_payment_id}`);
                     const [pagamentos] = await connection.query(
-                        'SELECT pedido_id FROM pagamentos WHERE mp_payment_id = ?',
+                        'SELECT p.pedido_id, ped.status FROM pagamentos p JOIN pedidos ped ON p.pedido_id = ped.id WHERE p.mp_payment_id = ?',
                         [mp_payment_id]
                     );
 
-                    if (pagamentos.length > 0) {
+                    if (pagamentos.length > 0 && pagamentos[0].status !== 'pago') {
                         const pedido_id = pagamentos[0].pedido_id;
-                        console.log(`[LOG 4] Pedido encontrado! ID do Pedido: ${pedido_id}. Iniciando atualização...`);
 
                         await connection.beginTransaction();
+
                         await connection.query("UPDATE pagamentos SET status = 'aprovado' WHERE mp_payment_id = ?", [mp_payment_id]);
                         await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
-                        await connection.commit();
 
-                        console.log(`[LOG 5] Sucesso! Pedido ${pedido_id} atualizado para 'pago'.`);
-                    } else {
-                        console.warn(`[LOG FALHA] Nenhum pedido encontrado no banco de dados para o mp_payment_id: ${mp_payment_id}`);
-                        // Mesmo em falha, não vamos reverter para garantir que a transação termine.
+                        const [items] = await connection.query('SELECT produto_id, quantidade FROM pedido_itens WHERE pedido_id = ?', [pedido_id]);
+                        for (const item of items) {
+                            await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
+                            const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
+                            if (updatedProduct.estoque <= 5 && (updatedProduct.estoque + item.quantidade) > 5) {
+                                await enviarEmailEstoqueBaixo(updatedProduct);
+                            }
+                        }
+
+                        await connection.commit();
+                        console.log(`[SUCESSO] Pedido ${pedido_id} atualizado para 'pago' e estoque decrementado.`);
                     }
                 } catch (dbError) {
-                    console.error('[LOG ERRO DB] Erro no banco de dados:', dbError);
+                    console.error('[ERRO DB] Erro no banco de dados do webhook:', dbError);
+                    await connection.rollback();
                 } finally {
                     if (connection) connection.release();
                 }
@@ -817,7 +832,7 @@ router.post('/mercado-pago-webhook', async (req, res) => {
         }
         res.status(200).send('OK');
     } catch (error) {
-        console.error('[LOG ERRO GERAL] Erro ao processar webhook:', error);
+        console.error('[ERRO GERAL] Erro ao processar webhook:', error);
         res.status(500).send('Erro no webhook.');
     }
 });

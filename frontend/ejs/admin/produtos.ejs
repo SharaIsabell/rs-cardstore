@@ -164,6 +164,35 @@
 
     .actions .delete-btn { color: #ef4444; }
     .actions .delete-btn:hover { color: #f87171; }
+
+
+    /* Estilos para os indicadores de estoque */
+    .stock-badge {
+        display: inline-block;
+        margin-left: 10px;
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 999px;
+        letter-spacing: 0.5px;
+        vertical-align: middle;
+    }
+    .stock-badge-warning {
+        background-color: #FEF3C7;
+        color: #92400E;
+    }
+    .stock-badge-error {
+        background-color: #FEE2E2;
+        color: #991B1B;
+    }
+    body.dark-mode .stock-badge-warning {
+        background-color: #78350F;
+        color: #FDE68A;
+    }
+    body.dark-mode .stock-badge-error {
+        background-color: #7F1D1D;
+        color: #FECACA;
+    }
   </style>
 </head>
 <body>
@@ -204,8 +233,15 @@
                 <td><%= produto.id %></td>
                 <td class="product-name"><%= produto.nome %></td>
                 <td><%= produto.categoria %></td>
-                <td>R$ <%= Number(produto.preco).toFixed(2).replace('.', ',') %></td>
-                <td><%= produto.estoque %></td>
+                <td>R$ <%= Number(produto.preco).toFixed(2).replace('.', ',') %></td>        
+                <td>
+                    <%= produto.estoque %>
+                    <% if (produto.estoque === 0) { %>
+                        <span class="stock-badge stock-badge-error">Esgotado</span>
+                    <% } else if (produto.estoque > 0 && produto.estoque <= 5) { %>
+                        <span class="stock-badge stock-badge-warning">Baixo</span>
+                    <% } %>
+                </td>
                 <td class="actions">
                     <a href="/admin/produtos/editar/<%= produto.id %>" class="edit-btn" title="Editar">
                         <i class="fas fa-edit"></i>
@@ -219,9 +255,6 @@
                 </tr>
             <% }) %>
             <% } else { %>
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 3rem;">Nenhum produto cadastrado.</td>
-            </tr>
             <% } %>
         </tbody>
         </table>
