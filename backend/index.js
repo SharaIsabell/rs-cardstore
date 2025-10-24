@@ -4,7 +4,7 @@ const db = require('../database/pooldb');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const { enviarEmailVerificacao, enviarEmailAlertaEstoque } = require('../frontend/js/enviarEmail');
+const { enviarEmailVerificacao, enviarEmailAlertaEstoque, enviarEmailConfirmacaoPedido } = require('../frontend/js/enviarEmail');
 const session = require('express-session');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
@@ -32,7 +32,69 @@ router.use((req, res, next) => {
   next();
 });
 
-// ... (outras rotas como '/', '/magic', etc. permanecem as mesmas)
+// Isolando admin do usuário
+router.use((req, res, next) => {
+  if (req.session && req.session.isAdmin && req.session.pinValidated) {
+    if (!req.path.startsWith('/admin')) {
+      return res.redirect('/admin');
+    }
+  }
+  next();
+});
+
+// --- Gerar NF Fictícia ---
+async function gerarNotaFiscalFicticia(connection, pedido_id) {
+  try {
+    // Gera um link fictício único
+    const fakeLink = `/pedidos/nf/${uuidv4()}/${pedido_id}.pdf`;
+    await connection.query(
+      'INSERT INTO notas_fiscais (pedido_id, link_arquivo) VALUES (?, ?)',
+      [pedido_id, fakeLink]
+    );
+    return fakeLink;
+  } catch (error) {
+    console.error(`[ERRO NF] Erro ao gerar NF fictícia para pedido ${pedido_id}:`, error);
+    return null; // Continua o processo mesmo se a NF falhar
+  }
+}
+
+// --- Enviar E-mail de Confirmação ---
+async function enviarConfirmacaoEGerarNF(connection, pedido_id) {
+  try {
+    // Gerar Nota Fiscal
+    const linkNF = await gerarNotaFiscalFicticia(connection, pedido_id);
+
+    // Buscar dados completos para o e-mail
+    const [[pedido]] = await connection.query(
+      `SELECT p.*, u.email, u.nome 
+       FROM pedidos p 
+       JOIN users u ON p.user_id = u.id 
+       WHERE p.id = ?`, 
+      [pedido_id]
+    );
+    
+    const [itens] = await connection.query(
+      `SELECT pi.*, prod.nome 
+       FROM pedido_itens pi 
+       JOIN produtos prod ON pi.produto_id = prod.id 
+       WHERE pi.pedido_id = ?`, 
+      [pedido_id]
+    );
+
+    if (!pedido) {
+      throw new Error('Pedido não encontrado para envio de e-mail.');
+    }
+    
+    // Enviar e-mail de confirmação 
+    await enviarEmailConfirmacaoPedido(pedido, itens, linkNF);
+    
+    console.log(`[SUCESSO] E-mail de confirmação e NF gerada para pedido ${pedido_id}.`);
+
+  } catch (error) {
+      console.error(`[ERRO EMAIL/NF] Falha ao processar pós-pagamento para pedido ${pedido_id}:`, error.message);
+  }
+}
+
 router.get('/', async (req, res) => {
   try {
     const [novosProdutos] = await db.query(
@@ -59,52 +121,58 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/magic', async (req, res) => {
+async function renderProductPage(req, res, viewName, category, baseUrl) {
   try {
-    const [rows] = await db.query(
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = 4; // Limite de 4 produtos por página
+    const offset = (page - 1) * limit;
+
+    // Condição WHERE para a consulta
+    const whereClause = category ? `WHERE categoria = ?` : `WHERE promocao = TRUE`;
+    const queryParams = category ? [category] : [];
+
+    // Contar o total de produtos para calcular as páginas
+    const [[{ total }]] = await db.query(
+      `SELECT COUNT(*) as total FROM produtos ${whereClause}`,
+      queryParams
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    // Buscar os produtos da página atual
+    const [produtos] = await db.query(
       `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
          FROM produtos 
-        WHERE categoria = ? 
-     ORDER BY id DESC`,
-      ['Magic']
+         ${whereClause}
+         ORDER BY id DESC 
+         LIMIT ? 
+         OFFSET ?`,
+      [...queryParams, limit, offset]
     );
-    res.render('magic', { produtos: rows });
+
+    res.render(viewName, {
+      produtos: produtos,
+      totalPages: totalPages,
+      currentPage: page,
+      baseUrl: baseUrl 
+    });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Erro ao carregar produtos de Magic.');
+    console.error(`Erro ao carregar produtos para a página ${viewName}:`, err);
+    res.status(500).send(`Erro ao carregar a página de ${viewName}.`);
   }
+}
+
+router.get('/magic', (req, res) => {
+  renderProductPage(req, res, 'magic', 'Magic', '/magic');
 });
 
-router.get('/yugioh', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo
-         FROM produtos
-        WHERE categoria = ?
-     ORDER BY id DESC`,
-      ['Yu-Gi-Oh']
-    );
-    res.render('yugioh', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao consultar produtos Yu-Gi-Oh:', err);
-    res.status(500).send('Erro ao carregar produtos de Yu-Gi-Oh.');
-  }
+router.get('/yugioh', (req, res) => {
+  renderProductPage(req, res, 'yugioh', 'Yu-Gi-Oh', '/yugioh');
 });
 
-router.get('/pokemon', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo
-         FROM produtos
-        WHERE categoria = ?
-     ORDER BY id DESC`,
-      ['Pokemon']
-    );
-    res.render('pokemon', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao consultar produtos Pokémon:', err);
-    res.status(500).send('Erro ao carregar produtos de Pokémon.');
-  }
+router.get('/pokemon', (req, res) => {
+  renderProductPage(req, res, 'pokemon', 'Pokemon', '/pokemon');
 });
 
 router.get('/produto/:id', async (req, res) => {
@@ -126,36 +194,12 @@ router.get('/produto/:id', async (req, res) => {
   }
 });
 
-router.get('/acessorios', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
-         FROM produtos 
-        WHERE categoria = ? 
-     ORDER BY id DESC`,
-      ['Acessorios']
-    );
-    res.render('acessorios', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao carregar produtos de Acessórios:', err);
-    res.status(500).send('Erro ao carregar a página de acessórios.');
-  }
+router.get('/acessorios', (req, res) => {
+  renderProductPage(req, res, 'acessorios', 'Acessorios', '/acessorios');
 });
 
-router.get('/promocoes', async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
-         FROM produtos 
-        WHERE promocao = ? 
-     ORDER BY id DESC`,
-      [true]
-    );
-    res.render('promocoes', { produtos: rows });
-  } catch (err) {
-    console.error('Erro ao carregar produtos em promoção:', err);
-    res.status(500).send('Erro ao carregar a página de promoções.');
-  }
+router.get('/promocoes', (req, res) => {
+  renderProductPage(req, res, 'promocoes', null, '/promocoes');
 });
 
 router.get('/login', (req, res) => {
@@ -167,43 +211,66 @@ router.get('/login', (req, res) => {
     res.render('login', { message: message, errorMessage: null });
 });
 
-// ROTA DE REGISTRO MODIFICADA
+// ROTA DE REGISTRO 
 router.post('/register', async (req, res) => {
-  // O campo 'endereco' não é mais coletado aqui
   const { nome, email, telefone, senha, confirmSenha } = req.body;
   
+  const respondError = (message) => {
+    if (req.accepts('json')) {
+      return res.status(400).json({ success: false, message });
+    }
+    return res.status(400).render('login', { 
+        message: null, 
+        errorMessage: message,
+        showRegister: true
+    });
+  };
+
   if (senha !== confirmSenha) {
-    return res.status(400).send('As senhas não coincidem.');
+    return respondError('As senhas não coincidem.');
   }
+
   if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
-      return res.status(400).send('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
+    return respondError('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
   }
+
   const telefoneNumerico = telefone.replace(/\D/g, '');
-  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) { // Ajuste para 10 ou 11 dígitos
-    return res.status(400).send('O telefone deve conter 10 ou 11 dígitos numéricos.');
+  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) {
+    return respondError('O telefone deve conter 10 ou 11 dígitos numéricos.');
   }
 
   try {
     const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existingUser.length > 0) {
-        return res.status(409).send('Este e-mail já está cadastrado.');
+      return respondError('Este e-mail já está cadastrado.');
     }
+
     const salt = await bcrypt.genSalt(10);
     const senha_hash = await bcrypt.hash(senha, salt);
     const token_verificacao = crypto.randomBytes(32).toString('hex');
     const token_verificacao_expira = new Date(Date.now() + 5 * 60 * 1000);
     
-    // Query de inserção sem o campo 'endereco'
     await db.query(
       'INSERT INTO users (nome, email, telefone, senha_hash, token_verificacao, token_verificacao_expira) VALUES (?, ?, ?, ?, ?, ?)',
       [nome, email, telefoneNumerico, senha_hash, token_verificacao, token_verificacao_expira]
     );
 
     await enviarEmailVerificacao(email, token_verificacao);
-    res.status(201).send('Cadastro realizado com sucesso! Por favor, verifique seu e-mail.');
+    
+  // Ao cadastrar com sucesso, renderize a página de login com uma mensagem de sucesso
+  if (req.accepts('json')) {
+      return res.status(201).json({ success: true, message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.' });
+  }
+
+  return res.status(201).render('login', {
+    errorMessage: null,
+    message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.',
+    showRegister: false
+  });
+
   } catch (error) {
     console.error('ERRO DETALHADO AO CADASTRAR:', error);
-    res.status(500).send('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
+    return respondError('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
   }
 });
 
@@ -236,40 +303,45 @@ router.post('/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
 
-    // 1) Tenta ADMIN primeiro
-    {
-      const [admins] = await db.query(
-        'SELECT id, email, password_hash, is_active FROM admins WHERE email = ?',
-        [email]
-      );
-      if (admins.length > 0 && admins[0].is_active === 1) {
-        const ok = await bcrypt.compare(senha, admins[0].password_hash);
-        if (ok) {
-          // Regenera sessão p/ evitar fixation
-          return req.session.regenerate(err => {
-            if (err) {
-              console.error('Erro ao regenerar sessão (admin):', err);
-              return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
-            }
-            // Seta flags de admin e limpa qualquer estado de cliente
-            req.session.isAdmin = true;
-            req.session.adminId = admins[0].id;
-            req.session.adminEmail = admins[0].email;
+// Tenta o ADMIN primeiro
+{
+  const [admins] = await db.query(
+    'SELECT id, email, password_hash, is_active FROM admins WHERE email = ?',
+    [email]
+  );
 
-            delete req.session.userId;
-            delete req.session.userName;
-            delete req.session.canAccessCheckout;
-            delete req.session.frete;
-            delete req.session.freteInfo;
-            delete req.session.pagamento;
-
-            return req.session.save(() => res.redirect('/admin'));
-          });
+  if (admins.length > 0 && admins[0].is_active === 1) {
+    const ok = await bcrypt.compare(senha, admins[0].password_hash);
+    if (ok) {
+      return req.session.regenerate(err => {
+        if (err) {
+          console.error('Erro ao regenerar sessão (admin):', err);
+          return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
         }
-      }
-    }
 
-    // 2) Não é admin (ou senha incorreta) -> segue fluxo de CLIENTE
+        // flags de admin
+        req.session.isAdmin = true;
+        req.session.adminId = admins[0].id;
+        req.session.adminEmail = admins[0].email;
+
+        // limpa flags de cliente para evitar dados do usuário
+        delete req.session.userId;
+        delete req.session.userName;
+        delete req.session.canAccessCheckout;
+        delete req.session.frete;
+        delete req.session.freteInfo;
+        delete req.session.pagamento;
+
+        // Gera PIN de 6 dígitos por sessão e exige confirmação
+        req.session.adminPin = String(Math.floor(100000 + Math.random() * 900000));
+        req.session.pinValidated = false;
+
+        return req.session.save(() => res.redirect('/admin/pin'));
+      });
+    }
+  }
+}
+    // Não é admin (ou senha incorreta) -> segue fluxo de CLIENTE
     const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
     if (users.length === 0) {
       return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
@@ -318,13 +390,13 @@ router.get('/logout', (req, res) => {
     });
 });
 
-// --- NOVA ROTA: Buscar endereço do usuário ---
+// --- Buscar endereço do usuário ---
 router.get('/api/get-address', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ success: false, message: 'Não autenticado.' });
     }
     try {
-        // CORREÇÃO: Seleciona as novas colunas de endereço
+        // Seleciona as novas colunas de endereço
         const [users] = await db.query(
             'SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM users WHERE id = ?', 
             [req.session.userId]
@@ -352,7 +424,7 @@ router.get('/api/get-address', async (req, res) => {
     }
 });
 
-// ROTA CHECKOUT MODIFICADA
+// ROTA CHECKOUT 
 router.get('/checkout', async (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login');
@@ -403,7 +475,6 @@ router.get('/checkout', async (req, res) => {
     }
 });
 
-
 router.post('/process_payment', async (req, res) => {
     if (!req.session.userId || !req.session.frete || !req.session.endereco_entrega) {
         return res.status(401).json({ error: 'Sessão inválida ou dados de entrega ausentes.' });
@@ -427,7 +498,9 @@ router.post('/process_payment', async (req, res) => {
             FROM carrinho_itens ci JOIN produtos p ON ci.produto_id = p.id WHERE ci.carrinho_id = ?`,
             [carrinho_id]
         );
+        if (items.length === 0) throw new Error('Carrinho vazio.');
 
+        // Verificação de estoque antes de prosseguir
         for (const item of items) {
             const [[product]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ? FOR UPDATE', [item.produto_id]);
             if (!product || product.estoque < item.quantidade) {
@@ -437,8 +510,8 @@ router.post('/process_payment', async (req, res) => {
         }
 
         const subtotal = items.reduce((acc, item) => {
-            const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
-            return acc + (precoFinal * item.quantidade);
+          const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
+          return acc + (precoFinal * item.quantidade);
         }, 0);
         
         const transaction_amount = subtotal + frete;
@@ -457,12 +530,13 @@ router.post('/process_payment', async (req, res) => {
                 paymentResult = await payment.create({ body: card_payment_data, requestOptions: { idempotencyKey } });
 
                 if (paymentResult.status === 'approved') {
-                    await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
+                  await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
                   await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
                   
+                  // Decremento de estoque e notificação
                   for (const item of items) {
-                    await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
-                    const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
+                    await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
+                    const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
                     const prevEstoque = updatedProduct.estoque + item.quantidade;
 
                     // LOW: cruzou de >5 para 1..5
@@ -481,6 +555,9 @@ router.post('/process_payment', async (req, res) => {
 
                   await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
                   
+                  // Dispara o e-mail e gera a NF para pagamento com cartão
+                  await enviarConfirmacaoEGerarNF(connection, pedido_id);
+
                   delete req.session.frete;
                   delete req.session.endereco_entrega;
                   await connection.commit();
@@ -526,7 +603,7 @@ router.post('/process_payment', async (req, res) => {
 async function createOrder(connection, user_id, total, items, status, frete, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
     
-    // CORREÇÃO: Verifica se o usuário já tem um CEP cadastrado
+    // Verifica se o usuário já tem um CEP cadastrado
     const [[currentUser]] = await connection.query('SELECT cep FROM users WHERE id = ?', [user_id]);
     
     // Se o usuário não tiver um endereço principal, salva este como principal
@@ -573,7 +650,7 @@ router.get('/pedido/confirmacao/:id', async (req, res) => {
         const pedido_id = req.params.id;
         const user_id = req.session.userId;
 
-        // ATUALIZAÇÃO: Busca também os dados de endereço do pedido
+        // Busca também os dados de endereço do pedido
         const [pedidos] = await db.query(
             `SELECT p.*, DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_pedido,
                     pag.metodo, pag.status as status_pagamento
@@ -773,7 +850,7 @@ router.post('/carrinho/salvar-frete-e-endereco', (req, res) => {
     res.json({ success: true, message: 'Dados de entrega salvos na sessão.' });
 });
 
-// --- ROTA NOVA: Para o frontend verificar o status do pedido ---
+// --- Para o frontend verificar o status do pedido ---
 router.get('/pedido/status/:id', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ error: "Não autorizado" });
@@ -794,6 +871,330 @@ router.get('/pedido/status/:id', async (req, res) => {
     }
 });
 
+router.get('/meus-pedidos', async (req, res) => {
+    if (!req.session.userId) {
+        return res.redirect('/login');
+    }
+    
+    try {
+        const user_id = req.session.userId;
+        
+        // Busca pedidos e a NF associada (se houver)
+        const [pedidos] = await db.query(
+            `SELECT 
+                p.id, 
+                p.status, 
+                p.total, 
+                DATE_FORMAT(p.criado_em, '%d/%m/%Y') as data_pedido,
+                nf.link_arquivo
+             FROM pedidos p
+             LEFT JOIN notas_fiscais nf ON p.id = nf.pedido_id
+             WHERE p.user_id = ?
+             ORDER BY p.criado_em DESC`,
+            [user_id]
+        );
+
+        // Busca os itens de todos os pedidos
+        const [itens] = await db.query(
+            `SELECT 
+                pi.pedido_id, 
+                prod.nome, 
+                prod.imagem_url
+             FROM pedido_itens pi
+             JOIN produtos prod ON pi.produto_id = prod.id
+             JOIN pedidos p ON pi.pedido_id = p.id
+             WHERE p.user_id = ?`,
+            [user_id]
+        );
+
+        // Agrupa os itens por pedido_id para facilitar a renderização
+        const pedidosComItens = pedidos.map(pedido => ({
+            ...pedido,
+            itens: itens.filter(item => item.pedido_id === pedido.id)
+        }));
+
+        res.render('meus-pedidos', { pedidos: pedidosComItens });
+
+    } catch (error) {
+        console.error("Erro ao carregar 'Meus Pedidos':", error);
+        res.status(500).send("Erro ao carregar seu histórico de pedidos.");
+    }
+});
+
+// --- ROTA FICTÍCIA: Download NF (Versão Modernizada) ---
+router.get('/pedidos/nf/:uuid/:id.pdf', (req, res) => {
+    // Pegamos os dados dos parâmetros da rota
+    const pedidoId = req.params.id;
+    const documentoId = req.params.uuid;
+
+    res.send(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Nota Fiscal Fictícia - Pedido #${pedidoId}</title>
+        
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+        <style>
+            /* Copiando as variáveis de cor do seu index.css para consistência */
+            :root {
+                --color-blue-dark: #0A2463;
+                --color-orange-vibrant: #FF9F1C;
+                --color-white: #FFFFFF;
+                --color-gray-light: #F4F4F9;
+                --color-text: #333;
+                --font-heading: 'Montserrat', sans-serif;
+                --font-body: 'Lato', sans-serif;
+                --theme-transition: all 0.5s ease;
+            }
+
+            /* Variáveis para o Modo Escuro */
+            body.dark-mode {
+                --color-blue-dark: #e0e0e0;
+                --color-white: #0D1B2A;
+                --color-gray-light: #1B263B;
+                --color-text: #E0E1E2;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family: var(--font-body);
+                color: var(--color-text);
+                background-color: var(--color-gray-light);
+                transition: var(--theme-transition);
+                padding: 2rem 1rem;
+            }
+
+            .container {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+
+            /* Estilo do Logo (copiado do header.ejs) */
+            .logo {
+                font-family: var(--font-heading);
+                font-size: 1.8rem;
+                font-weight: 800;
+                color: var(--color-blue-dark);
+                text-decoration: none;
+            }
+            .logo span {
+                color: var(--color-orange-vibrant);
+            }
+
+            /* Caixa da Nota Fiscal */
+            .invoice-box {
+                background-color: var(--color-white);
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.07);
+                border: 1px solid #e0e0e0;
+                transition: var(--theme-transition);
+            }
+
+            .invoice-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 2rem;
+                border-bottom: 2px dashed #eee;
+            }
+            
+            .invoice-header h1 {
+                font-family: var(--font-heading);
+                color: var(--color-blue-dark);
+                font-size: 2.2rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .invoice-body {
+                padding: 2.5rem;
+                font-size: 1.1rem;
+                line-height: 1.7;
+            }
+            .invoice-body p {
+                margin-bottom: 1.5rem;
+            }
+            .invoice-body strong {
+                color: var(--color-blue-dark);
+                font-weight: 700;
+                margin-right: 8px;
+            }
+            .invoice-body div {
+                margin-bottom: 0.5rem;
+            }
+
+            .invoice-footer {
+                display: flex;
+                justify-content: space-between;
+                gap: 1rem;
+                padding: 2rem;
+                background-color: var(--color-gray-light);
+                border-top: 1px solid #e0e0e0;
+                border-radius: 0 0 12px 12px;
+            }
+
+            /* Botões */
+            .btn {
+                text-decoration: none;
+                font-family: var(--font-heading);
+                font-weight: 700;
+                font-size: 1rem;
+                padding: 0.8rem 1.5rem;
+                border-radius: 50px;
+                border: 2px solid transparent;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .btn-primary {
+                background-color: var(--color-orange-vibrant);
+                border-color: var(--color-orange-vibrant);
+                color: var(--color-white);
+            }
+            .btn-primary:hover {
+                background-color: #ffb14b;
+                border-color: #ffb14b;
+                transform: translateY(-3px);
+            }
+            .btn-secondary {
+                background-color: var(--color-blue-dark);
+                border-color: var(--color-blue-dark);
+                color: var(--color-white);
+            }
+            .btn-secondary:hover {
+                opacity: 0.8;
+                transform: translateY(-3px);
+            }
+            
+            /* Ajustes Dark Mode */
+            body.dark-mode .invoice-box {
+                border-color: #2a3b52;
+            }
+            body.dark-mode .invoice-header {
+                border-color: #2a3b52;
+            }
+            body.dark-mode .invoice-body strong {
+                color: var(--color-orange-vibrant);
+            }
+            body.dark-mode .invoice-footer {
+                border-color: #2a3b52;
+            }
+            body.dark-mode .btn-primary {
+                color: #0D1B2A; 
+            }
+            body.dark-mode .btn-secondary {
+                background-color: var(--color-gray-light);
+                border-color: var(--color-blue-dark);
+                color: var(--color-blue-dark);
+            }
+            body.dark-mode .btn-secondary:hover {
+                background-color: var(--color-blue-dark);
+                color: var(--color-gray-light);
+            }
+
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="invoice-box">
+                <header class="invoice-header">
+                    <h1><i class="fas fa-receipt"></i> Nota Fiscal</h1>
+                    <div class="logo">RS<span>CardStore</span></div>
+                </header>
+
+                <main class="invoice-body">
+                    <p>Este é um <strong>documento de simulação</strong> gerado pelo sistema para fins de demonstração.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 1.5rem 0;">
+                    <div><strong>Pedido ID:</strong> ${pedidoId}</div>
+                    <div><strong>Documento ID:</strong> ${documentoId}</div>
+                    
+                    <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #555;">
+                        Em um sistema real, aqui seriam exibidos os dados completos do comprador,
+                        os itens do pedido com valores, impostos e o QR Code da Sefaz.
+                    </p>
+                </main>
+
+                <footer class="invoice-footer">
+                    <a href="/meus-pedidos" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Voltar
+                    </a>
+                    
+                    <button onclick="downloadTxt()" class="btn btn-primary">
+                        <i class="fas fa-download"></i> Baixar .txt
+                    </button>
+                </footer>
+            </div>
+        </div>
+
+        <script>
+            (function() {
+                const checkbox = document.getElementById('theme-checkbox'); // Embora não exista, o script verifica o localStorage
+                const userPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const localTheme = localStorage.getItem('theme');
+
+                if (localTheme === 'dark' || (!localTheme && userPrefersDark)) {
+                    document.body.classList.add('dark-mode');
+                }
+                
+                // Simplesmente aplicamos o tema na carga, já que não há switch nesta página
+            })();
+        </script>
+        
+        <script>
+            function downloadTxt() {
+                // Define o conteúdo do arquivo TXT
+                const content = \`
+Resumo do Pedido - RS Card Store
+---------------------------------
+
+Este é um resumo fictício do seu pedido.
+
+Pedido ID: ${pedidoId}
+Documento ID (NF): ${documentoId}
+
+(Em um sistema real, aqui estariam todos os itens, preços e dados do cliente)
+                \`;
+
+                // Cria um objeto "Blob" (um arquivo em memória)
+                const blob = new Blob([content.trim()], { type: 'text/plain' });
+
+                // Cria um link <a> invisível
+                const a = document.createElement('a');
+                
+                // Cria uma URL para o Blob e a define como href do link
+                a.href = URL.createObjectURL(blob);
+                
+                // Define o nome do arquivo que será baixado
+                a.download = 'pedido_${pedidoId}.txt';
+                
+                // Simula o clique no link para iniciar o download
+                document.body.appendChild(a);
+                a.click();
+                
+                // Remove o link da memória
+                document.body.removeChild(a);
+                URL.revokeObjectURL(a.href);
+            }
+        </script>
+    </body>
+    </html>
+    `);
+});
+
 // --- Webhook para receber notificações do Mercado Pago ---
 router.post('/mercado-pago-webhook', async (req, res) => {
     console.log('--- NOVO WEBHOOK RECEBIDO ---');
@@ -802,7 +1203,6 @@ router.post('/mercado-pago-webhook', async (req, res) => {
         
         if (notification.type === 'payment' && notification.data && notification.data.id) {
             const paymentId = notification.data.id;
-
             const paymentInfo = await payment.get({ id: paymentId });
 
             if (paymentInfo && paymentInfo.status === 'approved'){
@@ -814,14 +1214,15 @@ router.post('/mercado-pago-webhook', async (req, res) => {
                         [mp_payment_id]
                     );
 
+                    // Garante que a atualização de estoque só ocorra uma vez
                     if (pagamentos.length > 0 && pagamentos[0].status !== 'pago') {
                         const pedido_id = pagamentos[0].pedido_id;
-
                         await connection.beginTransaction();
 
                         await connection.query("UPDATE pagamentos SET status = 'aprovado' WHERE mp_payment_id = ?", [mp_payment_id]);
                         await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
 
+                        // Decremento de estoque para pagamentos via webhook (PIX)
                         const [items] = await connection.query('SELECT produto_id, quantidade FROM pedido_itens WHERE pedido_id = ?', [pedido_id]);
                         for (const item of items) {
                           await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);

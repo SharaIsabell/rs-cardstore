@@ -49,6 +49,12 @@
           <i class="fa-solid fa-cart-shopping"></i>
         </a>
 
+        <% if (locals.session && session.userId) { %>
+          <a href="/meus-pedidos" aria-label="Meus Pedidos" title="Meus Pedidos">
+            <i class="fa-solid fa-receipt"></i>
+          </a>
+        <% } %>
+
         <div class="theme-switch-wrapper">
           <label class="theme-switch" for="theme-checkbox">
             <input type="checkbox" id="theme-checkbox" />
