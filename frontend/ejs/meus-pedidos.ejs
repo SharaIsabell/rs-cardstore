@@ -4,107 +4,318 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meus Pedidos - RS Card Store</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <link rel="stylesheet" href="../css/index.css">
-    <link rel="stylesheet" href="../css/carrinho.css"> <style>
-        .order-list { 
-            list-style: none; 
-            padding: 0; 
+    <link rel="stylesheet" href="../css/carrinho.css">
+
+    <style>
+        .order-list {
+            list-style: none;
+            padding: 0;
             margin-top: 2rem;
         }
-        .order-card { 
-            background: var(--color-gray-light); 
+
+        .order-card {
+            background: var(--color-gray-light);
             border: 1px solid #e0e0e0;
-            border-radius: 8px; 
-            margin-bottom: 2rem; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease;
         }
-        .order-header { 
-            display: flex; 
-            justify-content: space-between; 
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
             flex-wrap: wrap;
             gap: 1.5rem;
-            padding: 1.5rem; 
+            padding: 1.5rem;
             background: var(--color-white);
             border-bottom: 1px solid #e0e0e0;
             border-radius: 8px 8px 0 0;
         }
-        .order-header div { 
-            display: flex; 
-            flex-direction: column; 
+
+        .order-header div {
+            display: flex;
+            flex-direction: column;
         }
+
         .order-header span {
             font-size: 0.9rem;
             color: #666;
             margin-bottom: 4px;
         }
-        .order-header strong { 
-            font-family: var(--font-heading); 
+
+        .order-header strong {
+            font-family: var(--font-heading);
             color: var(--color-blue-dark);
             font-size: 1.1rem;
             text-transform: capitalize;
         }
-        .order-body { 
-            padding: 1.5rem; 
-            display: flex; 
+
+        .order-body {
+            padding: 1.5rem;
+            display: flex;
             justify-content: space-between;
-            align-items: center; 
-            gap: 1.5rem; 
+            align-items: center;
+            gap: 1.5rem;
             flex-wrap: wrap;
         }
-        .order-items-preview { 
-            display: flex; 
-            gap: 1rem; 
-            flex-grow: 1; 
+
+        .order-items-preview {
+            display: flex;
+            gap: 1rem;
+            flex-grow: 1;
             align-items: center;
         }
-        .order-items-preview img { 
-            width: 60px; 
-            height: 60px; 
+
+        .order-items-preview img {
+            width: 60px;
+            height: 60px;
             object-fit: contain;
-            border-radius: 4px; 
+            border-radius: 4px;
             background: var(--color-white);
             border: 1px solid #eee;
         }
+
         .order-items-preview .items-plus {
             font-style: italic;
             color: #555;
         }
-        .order-actions { 
-            min-width: 180px; 
-            text-align: right; 
-        }
-        .order-actions .cta-button { 
-            padding: 0.8rem 1.5rem; 
-            font-size: 0.9rem;
-        }
-        .order-actions .cta-button.disabled { 
-            background-color: #ccc; 
-            border-color: #ccc; 
-            color: #666;
-            cursor: not-allowed; 
+
+        .order-actions {
+            min-width: 180px;
+            text-align: right;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: flex-end;
         }
 
-        /* Ajustes para Modo Escuro */
+        .order-actions .cta-button {
+            padding: 0.8rem 1.5rem;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .order-actions .cta-button.disabled {
+            background-color: #ccc;
+            border-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        /* --- NOVOS ESTILOS PARA O PAINEL DE RASTREIO --- */
+
+        .order-actions .cta-button.outline {
+            background-color: transparent;
+            border-color: var(--color-blue-dark);
+            color: var(--color-blue-dark);
+        }
+
+        .order-actions .cta-button.outline:hover {
+            background-color: var(--color-blue-dark);
+            color: var(--color-white);
+        }
+
+        .order-tracking-details {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            padding: 0 1.5rem;
+            background-color: var(--color-white);
+            border-top: 1px solid #e0e0e0;
+            border-radius: 0 0 8px 8px;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease-out, padding 0.3s ease-out;
+        }
+
+        .order-tracking-details.open {
+            transition: max-height 1.2s ease-in-out, opacity 0.4s ease 0.1s, padding 1.2s ease-in-out;
+        }
+
+        .order-tracking-details h2 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            color: var(--color-blue-dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .tracking-timeline {
+            position: relative;
+            padding-left: 40px;
+            list-style: none;
+        }
+
+        .tracking-timeline::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 5px;
+            bottom: 5px;
+            width: 2px;
+            background-color: #ddd;
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-icon {
+            position: absolute;
+            left: -20px;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ddd;
+            color: var(--color-white);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 2;
+        }
+
+        .timeline-content {
+            padding-left: 1.5rem;
+        }
+
+        .timeline-content strong {
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #999;
+        }
+
+        .timeline-content span {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .timeline-item.active .timeline-icon {
+            background-color: var(--color-orange-vibrant);
+        }
+
+        .timeline-item.active .timeline-content strong {
+            color: var(--color-blue-dark);
+        }
+
+        .timeline-item.active .timeline-content span {
+            color: var(--color-text);
+        }
+
+        .timeline-item.active::before {
+            content: '';
+            position: absolute;
+            left: -18px;
+            top: 40px;
+            bottom: -1.5rem;
+            width: 2px;
+            background-color: var(--color-orange-vibrant);
+            z-index: 1;
+        }
+
+        .timeline-item:last-child.active::before {
+            display: none;
+        }
+
+        .tracking-code-box {
+            background-color: var(--color-gray-light);
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .tracking-code-box strong {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--color-blue-dark);
+        }
+
+        .tracking-code-box span {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--color-orange-vibrant);
+        }
+
+        /* --- Animação escalonada --- */
+
+        .order-tracking-details h2,
+        .order-tracking-details .timeline-item,
+        .order-tracking-details .tracking-code-box {
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .order-tracking-details.open h2,
+        .order-tracking-details.open .timeline-item,
+        .order-tracking-details.open .tracking-code-box {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .order-tracking-details.open h2 { transition-delay: 0.1s; }
+        .order-tracking-details.open .tracking-timeline .timeline-item:nth-child(1) { transition-delay: 0.2s; }
+        .order-tracking-details.open .tracking-timeline .timeline-item:nth-child(2) { transition-delay: 0.3s; }
+        .order-tracking-details.open .tracking-timeline .timeline-item:nth-child(3) { transition-delay: 0.4s; }
+        .order-tracking-details.open .tracking-timeline .timeline-item:nth-child(4) { transition-delay: 0.5s; }
+        .order-tracking-details.open .tracking-timeline .timeline-item:nth-child(5) { transition-delay: 0.6s; }
+        .order-tracking-details.open .tracking-code-box { transition-delay: 0.7s; }
+
+        /* --- FIM DOS NOVOS ESTILOS --- */
+
         body.dark-mode .order-card { border-color: #2a3b52; }
         body.dark-mode .order-header { background: var(--color-white); border-color: #2a3b52; }
         body.dark-mode .order-header span { color: #aaa; }
         body.dark-mode .order-items-preview img { background: var(--color-gray-light); border-color: #2a3b52; }
         body.dark-mode .order-items-preview .items-plus { color: #ccc; }
+        body.dark-mode .order-actions .cta-button.outline {
+            border-color: var(--color-orange-vibrant);
+            color: var(--color-orange-vibrant);
+        }
+        body.dark-mode .order-actions .cta-button.outline:hover {
+            background-color: var(--color-orange-vibrant);
+            color: var(--color-white);
+        }
+        body.dark-mode .order-tracking-details {
+            background-color: #1B263B;
+            border-color: #2a3b52;
+        }
+        body.dark-mode .timeline-item.active .timeline-content strong { color: var(--color-text); }
+        body.dark-mode .tracking-code-box {
+            background-color: var(--color-white);
+            border-color: #2a3b52;
+        }
+        body.dark-mode .tracking-code-box strong { color: var(--color-text); }
 
         @media (max-width: 768px) {
             .order-header { flex-direction: column; gap: 1rem; }
             .order-body { flex-direction: column; align-items: stretch; }
-            .order-actions { text-align: left; }
+            .order-actions {
+                text-align: left;
+                justify-content: flex-start;
+            }
         }
     </style>
 </head>
+
 <body>
     <%- include('partials/header') %>
 
@@ -133,7 +344,7 @@
                                 <strong><%= pedido.status %></strong>
                             </div>
                         </div>
-                        
+
                         <div class="order-body">
                             <div class="order-items-preview">
                                 <% pedido.itens.slice(0, 4).forEach(item => { %>
@@ -143,8 +354,12 @@
                                     <span class="items-plus">+ <%= pedido.itens.length - 4 %> outro(s) item(ns)</span>
                                 <% } %>
                             </div>
-                            
+
                             <div class="order-actions">
+                                <button class="cta-button outline js-track-toggle" data-target="tracking-<%= pedido.id %>">
+                                    <i class="fa-solid fa-truck-fast"></i> Rastrear pacote
+                                </button>
+
                                 <% if (pedido.link_arquivo) { %>
                                     <a href="<%= pedido.link_arquivo %>" class="cta-button" target="_blank">
                                         <i class="fa-solid fa-file-invoice"></i> Ver Nota Fiscal
@@ -153,6 +368,72 @@
                                     <button class="cta-button disabled" disabled>NF Indisponível</button>
                                 <% } %>
                             </div>
+                        </div>
+
+                        <div class="order-tracking-details" id="tracking-<%= pedido.id %>">
+                            <h2 class="section-subtitle">Acompanhamento do Pedido</h2>
+
+                            <%
+                                const statusMap = { 'pendente': 0, 'pago': 1, 'enviado': 2, 'entregue': 3, 'cancelado': -1 };
+                                const statusIndex = statusMap[pedido.status] || 0;
+                            %>
+
+                            <% if (statusIndex === -1) { %>
+                                <div class="tracking-timeline">
+                                    <div class="timeline-item active">
+                                        <div class="timeline-icon" style="color: #ef4444;"><i class="fas fa-times-circle"></i></div>
+                                        <div class="timeline-content">
+                                            <strong>Pedido Cancelado</strong>
+                                            <span>Este pedido foi cancelado.</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% } else { %>
+                                <div class="tracking-timeline">
+                                    <div class="timeline-item active">
+                                        <div class="timeline-icon"><i class="fas fa-receipt"></i></div>
+                                        <div class="timeline-content">
+                                            <strong>Pedido Realizado</strong>
+                                            <span><%= pedido.data_pedido %></span>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item <%= statusIndex >= 1 ? 'active' : '' %>">
+                                        <div class="timeline-icon"><i class="fas fa-credit-card"></i></div>
+                                        <div class="timeline-content">
+                                            <strong>Pagamento Aprovado</strong>
+                                            <span><%= statusIndex >= 1 ? 'Pagamento confirmado!' : 'Aguardando...' %></span>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item <%= statusIndex >= 1 ? 'active' : '' %>">
+                                        <div class="timeline-icon"><i class="fas fa-box-open"></i></div>
+                                        <div class="timeline-content">
+                                            <strong>Em Separação</strong>
+                                            <span><%= statusIndex >= 2 ? 'Concluído' : (statusIndex === 1 ? 'Preparando seu pedido...' : 'Aguardando...') %></span>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item <%= statusIndex >= 2 ? 'active' : '' %>">
+                                        <div class="timeline-icon"><i class="fas fa-truck"></i></div>
+                                        <div class="timeline-content">
+                                            <strong>Pedido Enviado</strong>
+                                            <span><%= statusIndex >= 3 ? 'Concluído' : (statusIndex === 2 ? 'Em trânsito...' : 'Aguardando...') %></span>
+                                        </div>
+                                    </div>
+                                    <div class="timeline-item <%= statusIndex >= 3 ? 'active' : '' %>">
+                                        <div class="timeline-icon"><i class="fas fa-home"></i></div>
+                                        <div class="timeline-content">
+                                            <strong>Pedido Entregue</strong>
+                                            <span><%= statusIndex >= 3 ? 'Entregue com sucesso!' : 'Aguardando...' %></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% } %>
+
+                            <% if (pedido.codigo_rastreamento) { %>
+                                <div class="tracking-code-box">
+                                    <strong>Código de Rastreio:</strong>
+                                    <span><%= pedido.codigo_rastreamento %></span>
+                                </div>
+                            <% } %>
                         </div>
                     </li>
                 <% }) %>
@@ -167,6 +448,44 @@
     </main>
 
     <%- include('partials/footer') %>
+
     <script src="/js/theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const trackButtons = document.querySelectorAll('.js-track-toggle');
+
+            trackButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const targetElement = document.getElementById(targetId);
+
+                    if (targetElement) {
+                        const isOpen = targetElement.classList.contains('open');
+
+                        if (isOpen) {
+                            // Fecha o painel
+                            targetElement.classList.remove('open');
+                            targetElement.style.maxHeight = '0';
+                            targetElement.style.paddingTop = 0;
+                            targetElement.style.paddingBottom = 0;
+                            targetElement.style.opacity = 0;
+
+                            this.innerHTML = '<i class="fa-solid fa-truck-fast"></i> Rastrear pacote';
+                            this.classList.add('outline');
+                        } else {
+                            // Abre o painel
+                            targetElement.classList.add('open');
+                            targetElement.style.maxHeight = '500px';
+                            targetElement.style.paddingTop = '1.5rem';
+                            targetElement.style.paddingBottom = '1.5rem';
+                            targetElement.style.opacity = 1;
+
+                            this.innerHTML = '<i class="fa-solid fa-eye-slash"></i> Esconder rastreio';
+                            this.classList.remove('outline');
+                        }
+                    }
+                });
+            });
+        });
+    </script>
 </body>
-</html>

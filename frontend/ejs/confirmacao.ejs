@@ -1,105 +1,146 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pedido Confirmado! - RS Card Store</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    
-    <link rel="stylesheet" href="/css/index.css">
-    <link rel="stylesheet" href="/css/checkout.css">
-    
-    <link rel="stylesheet" href="/css/confirmacao.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedido Confirmado! - RS Card Store</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="/css/checkout.css">
+  <link rel="stylesheet" href="/css/confirmacao.css">
 </head>
 <body>
-    <%- include('partials/header') %>
+  <%- include('partials/header') %>
 
-    <div class="confetti-container"></div>
+  <div class="confetti-container"></div>
 
-    <main class="container section">
-        <div class="confirmation-box">
-            <div class="confirmation-icon">
-                <i class="fas fa-check-circle"></i>
+  <main class="container section">
+    <div class="confirmation-box">
+      <div class="confirmation-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+
+      <h1 class="confirmation-title">Oba! Seu pedido foi confirmado!</h1>
+      <p class="confirmation-subtitle">
+        Recebemos seu pedido #<%= pedido.id %> e já estamos preparando tudo. <br>
+        Você receberá as atualizações por e-mail.
+      </p>
+
+      <a href="/" class="cta-button">Continuar Comprando</a>
+    </div>
+
+    <div class="order-details-grid">
+      <div class="tracking-section">
+        <h2 class="section-subtitle">Acompanhamento do Pedido</h2>
+
+        <% 
+          const statusMap = { 'pendente': 0, 'pago': 1, 'enviado': 2, 'entregue': 3, 'cancelado': -1 };
+          const statusIndex = statusMap[pedido.status] || 0;
+        %>
+
+        <% if (statusIndex === -1) { %>
+          <div class="timeline-item active">
+            <div class="timeline-icon" style="color: #ef4444;">
+              <i class="fas fa-times-circle"></i>
             </div>
-            <h1 class="confirmation-title">Oba! Seu pedido foi confirmado!</h1>
-            <p class="confirmation-subtitle">
-                Recebemos seu pedido #<%= pedido.id %> e já estamos preparando tudo. <br>
-                Você receberá as atualizações por e-mail.
-            </p>
-
-            <a href="/" class="cta-button">Continuar Comprando</a>
-        </div>
-
-        <div class="order-details-grid">
-            <div class="tracking-section">
-                <h2 class="section-subtitle">Acompanhamento do Pedido</h2>
-                <div class="tracking-timeline">
-                    <div class="timeline-item active">
-                        <div class="timeline-icon"><i class="fas fa-receipt"></i></div>
-                        <div class="timeline-content">
-                            <strong>Pedido Realizado</strong>
-                            <span><%= pedido.data_pedido %></span>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon"><i class="fas fa-credit-card"></i></div>
-                        <div class="timeline-content">
-                            <strong>Pagamento Aprovado</strong>
-                            <span>Aguardando...</span>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon"><i class="fas fa-box-open"></i></div>
-                        <div class="timeline-content">
-                            <strong>Em Separação</strong>
-                            <span>Aguardando...</span>
-                        </div>
-                    </div>
-                    <div class="timeline-item">
-                        <div class="timeline-icon"><i class="fas fa-truck"></i></div>
-                        <div class="timeline-content">
-                            <strong>Pedido Enviado</strong>
-                            <span>Aguardando...</span>
-                        </div>
-                    </div>
-                </div>
-                <p class="tracking-notice">
-                    Esta seção será atualizada conforme seu pedido avança. Fique de olho!
-                </p>
+            <div class="timeline-content">
+              <strong>Pedido Cancelado</strong>
+              <span>Este pedido foi cancelado.</span>
+            </div>
+          </div>
+        <% } else { %>
+          <div class="tracking-timeline">
+            <div class="timeline-item active">
+              <div class="timeline-icon"><i class="fas fa-receipt"></i></div>
+              <div class="timeline-content">
+                <strong>Pedido Realizado</strong>
+                <span><%= pedido.data_pedido %></span>
+              </div>
             </div>
 
-            <aside class="summary">
-                <h2 class="section-subtitle">Resumo da Compra</h2>
-                <div class="summary-total">
-                    <span>Total Pago (<%= pedido.metodo %>)</span>
-                    <strong>R$ <%= parseFloat(pedido.total).toFixed(2) %></strong>
-                </div>
+            <div class="timeline-item <%= statusIndex >= 1 ? 'active' : '' %>">
+              <div class="timeline-icon"><i class="fas fa-credit-card"></i></div>
+              <div class="timeline-content">
+                <strong>Pagamento Aprovado</strong>
+                <span><%= statusIndex >= 1 ? 'Pagamento confirmado!' : 'Aguardando...' %></span>
+              </div>
+            </div>
 
-                <div class="shipping-address-summary">
-                    <h3 class="section-subtitle">Endereço de Entrega</h3>
-                    <p>
-                        <%= pedido.endereco_rua %>, <%= pedido.endereco_numero %>
-                        <% if (pedido.endereco_complemento) { %>
-                            - <%= pedido.endereco_complemento %>
-                        <% } %>
-                        <br>
-                        <%= pedido.endereco_bairro %> - <%= pedido.endereco_cidade %>/<%= pedido.endereco_estado %>
-                        <br>
-                        CEP: <%= pedido.endereco_cep %>
-                    </p>
-                </div>
-            </aside>
+            <div class="timeline-item <%= statusIndex >= 1 ? 'active' : '' %>">
+              <div class="timeline-icon"><i class="fas fa-box-open"></i></div>
+              <div class="timeline-content">
+                <strong>Em Separação</strong>
+                <span>
+                  <%= statusIndex >= 2 ? 'Concluído' : (statusIndex === 1 ? 'Preparando seu pedido...' : 'Aguardando...') %>
+                </span>
+              </div>
+            </div>
+
+            <div class="timeline-item <%= statusIndex >= 2 ? 'active' : '' %>">
+              <div class="timeline-icon"><i class="fas fa-truck"></i></div>
+              <div class="timeline-content">
+                <strong>Pedido Enviado</strong>
+                <span>
+                  <%= statusIndex >= 3 ? 'Concluído' : (statusIndex === 2 ? 'Em trânsito...' : 'Aguardando...') %>
+                </span>
+              </div>
+            </div>
+
+            <div class="timeline-item <%= statusIndex >= 3 ? 'active' : '' %>">
+              <div class="timeline-icon"><i class="fas fa-home"></i></div>
+              <div class="timeline-content">
+                <strong>Pedido Entregue</strong>
+                <span><%= statusIndex >= 3 ? 'Entregue com sucesso!' : 'Aguardando...' %></span>
+              </div>
+            </div>
+          </div>
+        <% } %>
+
+        <% if (pedido.codigo_rastreamento) { %>
+          <div class="tracking-code-box">
+            <strong>Código de Rastreio:</strong>
+            <span><%= pedido.codigo_rastreamento %></span>
+          </div>
+        <% } %>
+
+        <p class="tracking-notice">
+          Esta seção será atualizada conforme seu pedido avança. Fique de olho!
+        </p>
+      </div>
+
+      <aside class="summary">
+        <h2 class="section-subtitle">Resumo da Compra</h2>
+
+        <div class="summary-total">
+          <span>Total Pago (<%= pedido.metodo %>)</span>
+          <strong>R$ <%= parseFloat(pedido.total).toFixed(2) %></strong>
         </div>
-    </main>
 
-    <%- include('partials/footer') %>
-    
-    <script src="/js/confetti.js"></script>
-    <script src="/js/theme.js"></script>
+        <div class="shipping-address-summary">
+          <h3 class="section-subtitle">Endereço de Entrega</h3>
+          <p>
+            <%= pedido.endereco_rua %>, <%= pedido.endereco_numero %>
+            <% if (pedido.endereco_complemento) { %>
+              - <%= pedido.endereco_complemento %>
+            <% } %>
+            <br>
+            <%= pedido.endereco_bairro %> - <%= pedido.endereco_cidade %>/<%= pedido.endereco_estado %><br>
+            CEP: <%= pedido.endereco_cep %>
+          </p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+
+  <script src="/js/confetti.js"></script>
+  <script src="/js/theme.js"></script>
 </body>
 </html>

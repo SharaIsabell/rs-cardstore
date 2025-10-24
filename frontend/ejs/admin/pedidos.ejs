@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gerenciar Pedidos • RS Card Store</title>
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+        --theme-transition: background-color 0.4s ease, color 0.4s ease;
+        --admin-bg: #F4F4F9;
+        --admin-card-bg: #FFFFFF;
+        --admin-card-border: #E5E7EB;
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #6B7280;
+        --admin-table-header-bg: #F9FAFB;
+        --admin-table-row-hover: #F3F4F6;
+        --success-bg: #D1FAE5;
+        --success-text: #065F46;
+        --success-border: #A7F3D0;
+    }
+    body.dark-mode {
+        --admin-bg: #0D1B2A;
+        --admin-card-bg: #1B263B;
+        --admin-card-border: #374151;
+        --admin-text-primary: #FFFFFF;
+        --admin-text-secondary: #9CA3AF;
+        --admin-table-header-bg: #1f2937;
+        --admin-table-row-hover: #2c3a50;
+        --success-bg: #064E3B;
+        --success-text: #A7F3D0;
+        --success-border: #059669;
+    }
+    body {
+        background-color: var(--admin-bg);
+        color: var(--admin-text-secondary);
+        transition: var(--theme-transition);
+    }
+    .section-title, .welcome-text strong {
+        color: var(--admin-text-primary);
+    }
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        text-decoration: none;
+        color: var(--admin-text-secondary);
+        font-weight: 600;
+        transition: color 0.2s ease;
+    }
+    .back-link:hover { color: var(--color-orange-vibrant); }
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .alert {
+        padding: 1rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--success-border);
+        border-radius: 8px;
+        background-color: var(--success-bg);
+        color: var(--success-text);
+        font-weight: 500;
+    }
+    .table-container {
+        background-color: var(--admin-card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.07);
+        overflow-x: auto;
+    }
+    .product-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .product-table th, .product-table td {
+        padding: 16px;
+        text-align: left;
+        border-bottom: 1px solid var(--admin-card-border);
+    }
+    .product-table th {
+        background-color: var(--admin-table-header-bg);
+        color: var(--admin-text-secondary);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .product-table tbody tr { transition: background-color 0.2s ease; }
+    .product-table tbody tr:hover { background-color: var(--admin-table-row-hover); }
+    .product-table tbody tr:last-child td { border-bottom: none; }
+    .product-table .customer-name {
+        font-weight: 600;
+        color: var(--admin-text-primary);
+    }
+    .actions { display: flex; gap: 15px; }
+    .actions a {
+        background: none; border: none; cursor: pointer; padding: 0;
+        font-size: 1.1rem; transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .actions a:hover { transform: scale(1.2); }
+    .actions .edit-btn { color: #3b82f6; }
+    .actions .edit-btn:hover { color: #60a5fa; }
+    
+    /* Badges de Status */
+    .status-badge {
+        padding: 4px 10px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 999px;
+    }
+    .status-pendente { background-color: #FEF3C7; color: #92400E; }
+    .status-pago { background-color: #DBEAFE; color: #1E40AF; }
+    .status-enviado { background-color: #D1FAE5; color: #065F46; }
+    .status-entregue { background-color: #C7D2FE; color: #3730A3; }
+    .status-cancelado { background-color: #FEE2E2; color: #991B1B; }
+    body.dark-mode .status-pendente { background-color: #78350F; color: #FDE68A; }
+    body.dark-mode .status-pago { background-color: #1E3A8A; color: #DBEAFE; }
+    body.dark-mode .status-enviado { background-color: #064E3B; color: #A7F3D0; }
+    body.dark-mode .status-entregue { background-color: #312E81; color: #C7D2FE; }
+    body.dark-mode .status-cancelado { background-color: #7F1D1D; color: #FECACA; }
+  </style>
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <main class="container section">
+
+    <a href="/admin" class="back-link"><i class="fas fa-chevron-left"></i> Voltar ao Painel</a>
+
+    <div class="page-header">
+      <div>
+        <h1 class="section-title" style="margin: 0;">Gerenciamento de Pedidos</h1>
+        <p class="welcome-text" style="margin: 0;">Bem-vindo, <strong><%= adminEmail %></strong>.</p>
+      </div>
+    </div>
+
+    <% if (message) { %>
+      <div class="alert"><%= message %></div>
+    <% } %>
+
+    <div class="table-container">
+        <table class="product-table">
+        <thead>
+            <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Data</th>
+            <th>Status</th>
+            <th>Total</th>
+            <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% if (pedidos.length > 0) { %>
+            <% pedidos.forEach(pedido => { %>
+                <tr>
+                <td>#<%= pedido.id %></td>
+                <td class="customer-name"><%= pedido.user_nome %> <br> <small><%= pedido.user_email %></small></td>
+                <td><%= pedido.data_formatada %></td>
+                <td>
+                    <span class="status-badge status-<%= pedido.status %>">
+                        <%= statusMap[pedido.status] || pedido.status %>
+                    </span>
+                </td>
+                <td>R$ <%= Number(pedido.total).toFixed(2).replace('.', ',') %></td>
+                <td class="actions">
+                    <a href="/admin/pedidos/<%= pedido.id %>" class="edit-btn" title="Gerenciar Pedido">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </td>
+                </tr>
+            <% }) %>
+            <% } else { %>
+                <tr>
+                    <td colspan="6" style="text-align: center;">Nenhum pedido encontrado.</td>
+                </tr>
+            <% } %>
+        </tbody>
+        </table>
+    </div>
+
+  </main>
+
+  <%- include('../partials/footer') %>
+  <script src="/js/theme.js" defer></script>
+</body>
+</html>

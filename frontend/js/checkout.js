@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const paymentMethodRadios = document.querySelectorAll('input[name="paymentMethod"]');
     const cardFormContainer = document.getElementById('form-checkout-card');
     const pixContainer = document.getElementById('payment-pix-container');
+    const bypassContainer = document.getElementById('payment-bypass-container');
     const progressBar = document.querySelector('.progress-bar');
     const generatePixButton = document.getElementById('generate-pix-button');
     const pixQrCodeContainer = document.getElementById('pix-qr-code');
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalChangeMethodButton = document.getElementById('modal-change-method-button');
     const modalCloseButton = document.querySelector('.modal-close');
     const errorMessageContainer = document.getElementById('payment-error-message');
+    const bypassPaymentButton = document.getElementById('bypass-payment-button');
 
     // --- Validação do formulário de cartão ---
     const validateCardForm = () => {
@@ -77,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showModal(
                 'Campo Obrigatório', 
                 `Por favor, preencha o campo: ${firstInvalidField}.`, 
-                true 
+                true // Indica que é um erro de validação para o modal se adaptar
             );
             return false; 
         }
@@ -146,11 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Controla a visibilidade dos botões com base no tipo de erro
         if (isValidationError) {
-            modalRetryButton.textContent = 'OK, Corrigir';
+            modalRetryButton.textContent = 'OK, Corrigir'; 
             modalChangeMethodButton.style.display = 'none'; 
         } else {
             modalRetryButton.textContent = 'Tentar Novamente'; 
-            modalChangeMethodButton.style.display = 'block';
+            modalChangeMethodButton.style.display = 'block'; 
         }
 
         modal.style.display = 'flex';
@@ -199,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cardFormContainer.style.display = selectedMethod === 'card' ? 'block' : 'none';
         cardWrapper.style.display = selectedMethod === 'card' ? 'block' : 'none';
         pixContainer.style.display = selectedMethod === 'pix' ? 'block' : 'none';
+        bypassContainer.style.display = selectedMethod === 'bypass' ? 'block' : 'none';
         errorMessageContainer.style.display = 'none';
     };
 
@@ -231,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 onSubmit: event => {
                     event.preventDefault();
 
+                    // --- Chama a validação ANTES de tudo ---
                     if (!validateCardForm()) {
                         return; // Para a execução se a validação falhar
                     }
@@ -324,7 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
 
                 if (data.status === 'pago') {
-                    clearInterval(pollingInterval);
+                    clearInterval(pollingInterval); // Para a verificação
+                    // Redireciona para a página de sucesso
                     window.location.href = `/pedido/confirmacao/${orderId}`;
                 }
             } catch (error) {
@@ -340,9 +345,42 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { pixCopyButton.textContent = 'Copiar Código'; }, 2000);
     });
 
+    // --- Event listener para o botão de bypass ---
+    bypassPaymentButton.addEventListener('click', () => {
+        showLoading();
+        bypassPaymentButton.disabled = true;
+
+        fetch("/process_payment_bypass", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // Enviamos o email apenas para manter um padrão, embora o backend vá pegar da sessão
+            body: JSON.stringify({ email: window.userEmail }) 
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Sucesso, redireciona para a confirmação
+                window.location.href = `/pedido/confirmacao/${data.orderId}`;
+            } else {
+                // Mostra erros (ex: "estoque insuficiente")
+                showModal('Erro no Teste', data.message || 'Não foi possível simular o pagamento.');
+                bypassPaymentButton.disabled = false;
+            }
+        })
+        .catch(err => {
+            console.error('Erro no fetch bypass:', err);
+            showModal('Erro de Comunicação', 'Não foi possível conectar ao servidor para o teste.');
+            bypassPaymentButton.disabled = false;
+        })
+        .finally(() => hideLoading());
+    });
+
     paymentMethodRadios.forEach(radio => radio.addEventListener('change', handlePaymentMethodChange));
     generatePixButton.addEventListener('click', handleGeneratePix);
 
     handlePaymentMethodChange();
-    initializeCardForm();
+    // Só inicializa o CardForm se a chave MP existir
+    if (mpPublicKey) {
+        initializeCardForm();
+    }
 });

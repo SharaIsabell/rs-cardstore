@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pedido #<%= pedido.id %> • RS Card Store</title>
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+        --theme-transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+        --admin-bg: #F4F4F9;
+        --admin-card-bg: #FFFFFF;
+        --admin-card-border: #E5E7EB;
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #6B7280;
+        --input-bg: #F9FAFB;
+        --input-border: #D1D5DB;
+        --input-focus-border: var(--color-orange-vibrant);
+        --admin-table-header-bg: #F9FAFB;
+    }
+    body.dark-mode {
+        --admin-bg: #0D1B2A;
+        --admin-card-bg: #1B263B;
+        --admin-card-border: #374151;
+        --admin-text-primary: #FFFFFF;
+        --admin-text-secondary: #9CA3AF;
+        --input-bg: #2b3952;
+        --input-border: #4B5563;
+        --admin-table-header-bg: #1f2937;
+    }
+    body {
+        background-color: var(--admin-bg);
+        transition: var(--theme-transition);
+        color: var(--admin-text-secondary);
+    }
+    .section-title { color: var(--admin-text-primary); }
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--admin-card-border);
+        margin-bottom: 2rem;
+    }
+    .back-link {
+        color: var(--admin-text-secondary);
+        text-decoration: none;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: color 0.2s ease;
+    }
+    .back-link:hover { color: var(--color-orange-vibrant); }
+    .form-card {
+        max-width: 900px;
+        margin: 0 auto;
+        background-color: var(--admin-card-bg);
+        border: 1px solid var(--admin-card-border);
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    .form-card form, .form-card-content {
+        padding: 2.5rem;
+    }
+    .form-section {
+        border: none;
+        padding: 0;
+        margin: 0 0 2rem 0;
+        border-left: 4px solid var(--color-orange-vibrant);
+        padding-left: 1.5rem;
+    }
+    .form-section:last-of-type { margin-bottom: 0; }
+    .form-section-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--admin-text-primary);
+        margin: 0 0 1.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .form-section-title i { color: var(--color-orange-vibrant); }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { margin-bottom: 8px; font-weight: 600; color: var(--admin-text-secondary); font-size: 0.9rem; }
+    .form-group input[type="text"], .form-group input[type="number"], .form-group select {
+        width: 100%;
+        padding: 12px; border: 1px solid var(--input-border); border-radius: 8px; background-color: var(--input-bg);
+        color: var(--admin-text-primary); font-size: 1rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-group input:focus, .form-group select:focus {
+        outline: none;
+        border-color: var(--input-focus-border); box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.25);
+    }
+    .form-actions {
+        margin-top: 2rem;
+        padding: 1.5rem 2.5rem;
+        background-color: var(--admin-table-header-bg, var(--admin-bg));
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 1rem;
+        border-top: 1px solid var(--admin-card-border);
+    }
+    .submit-btn, .cancel-link {
+        padding: 12px 24px; border: none;
+        border-radius: 8px; cursor: pointer;
+        font-size: 1rem; font-weight: 700; text-decoration: none; transition: all 0.2s ease;
+    }
+    .submit-btn {
+        color: white;
+        background: linear-gradient(45deg, var(--color-orange-vibrant), #ff7e5f);
+        box-shadow: 0 4px 15px rgba(255, 159, 28, 0.3);
+    }
+    .submit-btn:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(255, 159, 28, 0.4); }
+    .cancel-link { background-color: transparent; color: var(--admin-text-secondary); }
+    .cancel-link:hover { background-color: var(--admin-card-border); color: var(--admin-text-primary); }
+
+    /* Estilos para Detalhes do Pedido */
+    .order-details p { margin: 0 0 0.5rem; line-height: 1.6; }
+    .order-details strong { color: var(--admin-text-primary); }
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    .items-table th, .items-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--admin-card-border);
+    }
+    .items-table th { background-color: var(--admin-table-header-bg); }
+  </style>
+</head>
+<body>
+  <%- include('../partials/header') %>
+
+  <main class="container section">
+    <div class="page-header">
+      <h1 class="section-title" style="margin: 0;">Pedido #<%= pedido.id %></h1>
+      <a href="/admin/pedidos" class="back-link"><i class="fas fa-chevron-left"></i> Voltar para a lista</a>
+    </div>
+    
+    <div class="form-card">
+      
+        <div class="form-card-content" style="border-bottom: 1px solid var(--admin-card-border);">
+            <fieldset class="form-section">
+                <legend class="form-section-title"><i class="fas fa-user"></i>Cliente e Entrega</legend>
+                <div class="order-details">
+                    <p><strong>Cliente:</strong> <%= pedido.user_nome %></p>
+                    <p><strong>Email:</strong> <%= pedido.user_email %></p>
+                    <hr style="border: 0; border-top: 1px solid var(--admin-card-border); margin: 1rem 0;">
+                    <p><strong>Endereço de Entrega:</strong><br>
+                        <%= pedido.endereco_rua %>, <%= pedido.endereco_numero %> 
+                        <% if (pedido.endereco_complemento) { %> - <%= pedido.endereco_complemento %> <% } %><br>
+                        <%= pedido.endereco_bairro %> - <%= pedido.endereco_cidade %>/<%= pedido.endereco_estado %><br>
+                        CEP: <%= pedido.endereco_cep %>
+                    </p>
+                </div>
+            </fieldset>
+
+            <fieldset class="form-section">
+                <legend class="form-section-title"><i class="fas fa-box-open"></i>Itens do Pedido</legend>
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Qtd.</th>
+                            <th>Preço Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% itens.forEach(item => { %>
+                        <tr>
+                            <td><%= item.nome %></td>
+                            <td><%= item.quantidade %></td>
+                            <td>R$ <%= Number(item.preco_unitario).toFixed(2) %></td>
+                            <td>R$ <%= (item.quantidade * item.preco_unitario).toFixed(2) %></td>
+                        </tr>
+                        <% }) %>
+                        <tr>
+                            <td colspan="3" style="text-align: right;"><strong>Frete:</strong></td>
+                            <td><strong>R$ <%= Number(pedido.frete).toFixed(2) %></strong></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" style="text-align: right;"><strong>Total:</strong></td>
+                            <td><strong>R$ <%= Number(pedido.total).toFixed(2) %></strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </fieldset>
+        </div>
+
+        <form action="/admin/pedidos/<%= pedido.id %>" method="POST">
+            <fieldset class="form-section">
+                <legend class="form-section-title"><i class="fas fa-sync-alt"></i>Atualizar Pedido</legend>
+            
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="status">Status do Pedido</label>
+                        <select id="status" name="status">
+                            <% allStatus.forEach(s => { %>
+                                <option value="<%= s %>" <%= (pedido.status === s) ? 'selected' : '' %>>
+                                    <%= s.charAt(0).toUpperCase() + s.slice(1) %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="codigo_rastreamento">Código de Rastreamento (somente se 'Enviado')</label>
+                        <input type="text" id="codigo_rastreamento" name="codigo_rastreamento" value="<%= pedido.codigo_rastreamento || '' %>">
+                    </div>
+                </div>
+            </fieldset>
+            
+            <div class="form-actions">
+            <a href="/admin/pedidos" class="cancel-link">Cancelar</a>
+            <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Salvar Alterações</button>
+            </div>
+        </form>
+    </div>
+  </main>
+
+  <%- include('../partials/footer') %>
+  <script src="/js/theme.js" defer></script>
+</body>
+</html>

@@ -600,6 +600,97 @@ router.post('/process_payment', async (req, res) => {
     }
 });
 
+router.post('/process_payment_bypass', async (req, res) => {
+    // alidação de sessão 
+    if (!req.session.userId || !req.session.frete || !req.session.endereco_entrega) {
+        return res.status(401).json({ success: false, message: 'Sessão inválida ou dados de entrega ausentes.' });
+    }
+
+    const user_id = req.session.userId;
+    const frete = req.session.frete.cost;
+    const endereco_entrega = req.session.endereco_entrega;
+    const connection = await db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // Busca carrinho
+        const [cart] = await connection.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
+        if (cart.length === 0) throw new Error('Carrinho não encontrado.');
+        
+        const carrinho_id = cart[0].id;
+        const [items] = await connection.query(`
+            SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.desconto_percentual
+            FROM carrinho_itens ci JOIN produtos p ON ci.produto_id = p.id WHERE ci.carrinho_id = ?`,
+            [carrinho_id]
+        );
+        if (items.length === 0) throw new Error('Carrinho vazio.');
+
+        // Verificação de estoque
+        for (const item of items) {
+            const [[product]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ? FOR UPDATE', [item.produto_id]);
+            if (!product || product.estoque < item.quantidade) {
+                await connection.rollback();
+                return res.status(400).json({ success: false, message: `Estoque insuficiente para o produto: ${product.nome}.` });
+            }
+        }
+
+        // Calcular total
+        const subtotal = items.reduce((acc, item) => {
+          const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
+          return acc + (precoFinal * item.quantidade);
+        }, 0);
+        const transaction_amount = subtotal + frete;
+
+        // Criar Pedido
+        // Criamos o pedido já com status 'pago'
+        const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete, endereco_entrega);
+
+        // Criamos um registro de pagamento fictício aprovado
+        await createPaymentRecord(connection, pedido_id, 'credito', 'aprovado', 'TEST_BYPASS_PAYMENT');
+                  
+        // Decremento de estoque e notificação (Lógica copiada do /process_payment)
+        for (const item of items) {
+            await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
+            const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
+            const prevEstoque = updatedProduct.estoque + item.quantidade;
+
+            if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
+              await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
+              await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+            }
+            if (updatedProduct.estoque === 0) {
+              await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
+              await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+              await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+            }
+        }
+
+        // Limpar carrinho
+        await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
+        
+        // Disparar o e-mail e gerar a NF
+        await enviarConfirmacaoEGerarNF(connection, pedido_id);
+
+        // Limpar sessão
+        delete req.session.frete;
+        delete req.session.endereco_entrega;
+        
+        // Commit
+        await connection.commit();
+        
+        // Sucesso
+        return res.status(201).json({ success: true, message: 'Pagamento de teste aprovado!', orderId: pedido_id });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao processar pagamento (BYPASS):', error);
+        res.status(500).json({ success: false, message: 'Ocorreu um erro no servidor durante o teste.' });
+    } finally {
+        connection.release();
+    }
+});
+
 async function createOrder(connection, user_id, total, items, status, frete, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
     
@@ -886,7 +977,8 @@ router.get('/meus-pedidos', async (req, res) => {
                 p.status, 
                 p.total, 
                 DATE_FORMAT(p.criado_em, '%d/%m/%Y') as data_pedido,
-                nf.link_arquivo
+                nf.link_arquivo,
+                p.codigo_rastreamento 
              FROM pedidos p
              LEFT JOIN notas_fiscais nf ON p.id = nf.pedido_id
              WHERE p.user_id = ?

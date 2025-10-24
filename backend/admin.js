@@ -131,6 +131,104 @@ router.get('/', requireAdminPin, async (req, res) => {
   }
 });
 
+// Rota para LISTAR todos os pedidos
+router.get('/pedidos', requireAdminPin, async (req, res) => {
+    try {
+        const [pedidos] = await db.query(
+            `SELECT 
+                p.id, p.status, p.total, 
+                DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_formatada,
+                u.nome as user_nome, u.email as user_email
+             FROM pedidos p
+             JOIN users u ON p.user_id = u.id
+             ORDER BY p.criado_em DESC`
+        );
+        
+        // Mapeia os status para exibição
+        const statusMap = {
+            'pendente': 'Pendente',
+            'pago': 'Pago',
+            'enviado': 'Enviado',
+            'entregue': 'Entregue',
+            'cancelado': 'Cancelado'
+        };
+
+        res.render('admin/pedidos', { 
+            pedidos, 
+            statusMap,
+            message: req.query.message,
+            adminEmail: req.session.adminEmail 
+        });
+    } catch (error) {
+        console.error("Erro ao carregar lista de pedidos:", error);
+        res.redirect('/admin?error=pedidos');
+    }
+});
+
+// Rota para ver/editar UM pedido
+router.get('/pedidos/:id', requireAdminPin, async (req, res) => {
+    try {
+        const pedidoId = req.params.id;
+        const [[pedido]] = await db.query(
+            `SELECT 
+                p.*, 
+                DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_formatada,
+                u.nome as user_nome, u.email as user_email
+             FROM pedidos p
+             JOIN users u ON p.user_id = u.id
+             WHERE p.id = ?`,
+            [pedidoId]
+        );
+
+        if (!pedido) {
+            return res.status(404).redirect('/admin/pedidos');
+        }
+
+        const [itens] = await db.query(
+            `SELECT pi.*, prod.nome 
+             FROM pedido_itens pi
+             JOIN produtos prod ON pi.produto_id = prod.id
+             WHERE pi.pedido_id = ?`,
+            [pedidoId]
+        );
+
+        const allStatus = ['pendente', 'pago', 'enviado', 'entregue', 'cancelado'];
+
+        res.render('admin/pedido-detalhe', {
+            pedido,
+            itens,
+            allStatus,
+            adminEmail: req.session.adminEmail
+        });
+    } catch (error) {
+        console.error(`Erro ao carregar pedido ${req.params.id}:`, error);
+        res.redirect('/admin/pedidos');
+    }
+});
+
+// Rota para ATUALIZAR o pedido
+router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
+    try {
+        const pedidoId = req.params.id;
+        const { status, codigo_rastreamento } = req.body;
+
+        // Se o status não for 'enviado', limpa o código de rastreio
+        const codigoFinal = (status === 'enviado') ? codigo_rastreamento : null;
+
+        await db.query(
+            `UPDATE pedidos 
+             SET status = ?, codigo_rastreamento = ? 
+             WHERE id = ?`,
+            [status, codigoFinal, pedidoId]
+        );
+
+        res.redirect('/admin/pedidos?message=Pedido atualizado com sucesso!');
+    } catch (error) {
+        console.error(`Erro ao atualizar pedido ${req.params.id}:`, error);
+        res.redirect(`/admin/pedidos/${req.params.id}?error=true`);
+    }
+});
+
 // Logout do admin
 router.get('/logout', (req, res) => {
   if (req.session) {
@@ -143,7 +241,7 @@ router.get('/logout', (req, res) => {
   return res.redirect('/login');
 });
 
-//Rota pra quando for preciso o admin repor o estoque ou algo do tipo
+// Rota pra quando for preciso o admin repor o estoque ou algo do tipo
 router.post('/produtos/:id/repor', requireAdminPin, async (req, res) => {
   try {
     const produtoId = parseInt(req.params.id, 10);
