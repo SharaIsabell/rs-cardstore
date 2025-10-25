@@ -58,6 +58,12 @@
             text-transform: capitalize;
         }
 
+        .order-delivery-date strong {
+            color: var(--color-orange-vibrant); /* Cor laranja */
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
         .order-body {
             padding: 1.5rem;
             display: flex;
@@ -331,6 +337,14 @@
                                 <span>Pedido ID</span>
                                 <strong>#<%= pedido.id %></strong>
                             </div>
+
+                            <% if (pedido.data_entrega_estimada) { %>
+                            <div class="order-delivery-date">
+                                <span>Chega em</span>
+                                <strong><%= pedido.data_entrega_estimada %></strong>
+                            </div>
+                            <% } %>
+
                             <div>
                                 <span>Data</span>
                                 <strong><%= pedido.data_pedido %></strong>
@@ -489,3 +503,4 @@
         });
     </script>
 </body>
+</html>

@@ -167,8 +167,104 @@ const enviarEmailConfirmacaoPedido = async (pedido, itens, linkNF) => {
     }
 };
 
+/**
+  * Envia e-mail de atualização de status do pedido para o cliente.
+  * @param {object} pedido - Dados do pedido (id)
+  * @param {object} cliente - Dados do cliente (email, nome)
+  * @param {string} novoStatus - O novo status do pedido ('pago', 'enviado', 'entregue', 'cancelado')
+  * @param {string|null} codigoRastreio - O código de rastreio, se aplicável (para status 'enviado')
+  */
+ const enviarEmailStatusPedido = async (pedido, cliente, novoStatus, codigoRastreio = null) => {
+     const transporter = nodemailer.createTransport({
+         service: 'gmail',
+         auth: {
+             user: GMAIL_USER,
+             pass: GMAIL_APP_PASS
+         }
+     });
+ 
+     const statusLegivelMap = {
+         'pago': 'Pagamento Confirmado',
+         'enviado': 'Enviado',
+         'entregue': 'Entregue',
+         'cancelado': 'Cancelado'
+     };
+     const statusLegivel = statusLegivelMap[novoStatus] || novoStatus.charAt(0).toUpperCase() + novoStatus.slice(1);
+ 
+     const subject = `Atualização do Pedido #${pedido.id}: ${statusLegivel} - RS Card Store`;
+
+     let statusMessage = '';
+     switch (novoStatus) {
+         case 'pago':
+             statusMessage = `Seu pagamento foi confirmado com sucesso! Já estamos separando seus produtos para envio.`;
+             break;
+         case 'enviado':
+             statusMessage = `Ótima notícia! Seu pedido foi enviado.`;
+             if (codigoRastreio) {
+                 statusMessage += ` Você pode acompanhá-lo usando o código de rastreio: <strong>${codigoRastreio}</strong>`;
+             }
+             break;
+         case 'entregue':
+             statusMessage = `Confirmamos a entrega do seu pedido! Esperamos que você ganhe vários duelos. 😊`;
+             break;
+         case 'cancelado':
+             statusMessage = `Seu pedido foi cancelado. Se você tiver alguma dúvida, por favor, entre em contato conosco.`;
+             break;
+         default:
+             statusMessage = `O status foi atualizado para ${statusLegivel}.`;
+     }
+ 
+     // corpo do e-mail
+     const corpoHtml = `
+     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+         <header style="background-color: #0A2463; padding: 20px; text-align: center;">
+             <h1 style="color: #FFFFFF; margin: 0; font-family: 'Montserrat', sans-serif;">RS<span style="color: #FF9F1C;">CardStore</span></h1>
+         </header>
+ 
+         <main style="padding: 30px 40px; color: #333;">
+             <h2 style="color: #0A2463;">Atualização do seu Pedido #${pedido.id}</h2>
+             
+             <p style="margin-bottom: 20px;">Olá, ${cliente.nome.split(' ')[0]}!</p>
+             <p style="margin-bottom: 20px;">Temos uma novidade sobre o seu pedido <strong>#${pedido.id}</strong>.</p>
+ 
+             <div style="background-color: #f4f4f9; padding: 15px; border-radius: 5px; margin-bottom: 25px; border-left: 4px solid #FF9F1C;">
+                 <p style="margin: 0; font-size: 1.1em;"><strong>Novo Status: ${statusLegivel}</strong></p>
+                 <p style="margin: 5px 0 0;">${statusMessage}</p>
+             </div>
+ 
+             <p>Você pode ver todos os detalhes do seu pedido acessando sua conta em nosso site:</p>
+             <div style="text-align: center; margin: 30px 0;">
+                 <a href="http://localhost:3000/meus-pedidos" target="_blank" style="background-color: #0A2463; color: #FFFFFF; padding: 12px 25px; text-decoration: none; border-radius: 50px; font-weight: bold; font-family: 'Lato', sans-serif;">
+                     Ver Meus Pedidos
+                 </a>
+             </div>
+             
+             <p style="margin-top: 30px;">Obrigado por comprar na RS Card Store!</p>
+         </main>
+         <footer style="background-color: #f9f9f9; text-align: center; padding: 20px; font-size: 0.8em; color: #777;">
+             © 2025 RS Card Store. Todos os direitos reservados.
+         </footer>
+     </div>
+     `;
+ 
+     const mailOptions = {
+         from: `"RS Card Store" <${GMAIL_USER}>`,
+         to: cliente.email, // E-mail do cliente
+         subject: subject,
+         html: corpoHtml
+     };
+ 
+     try {
+         await transporter.sendMail(mailOptions);
+         console.log(`[E-MAIL] Atualização de status (${novoStatus}) do pedido ${pedido.id} enviada para ${cliente.email}`);
+     } catch (error) {
+         console.error(`[E-MAIL] Erro ao enviar atualização (${novoStatus}) para ${cliente.email} (Pedido ${pedido.id}):`, error);
+     }
+ };
+
 module.exports = { 
     enviarEmailVerificacao, 
     enviarEmailAlertaEstoque,
-    enviarEmailConfirmacaoPedido
+    enviarEmailConfirmacaoPedido,
+    enviarEmailStatusPedido
 };

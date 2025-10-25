@@ -125,7 +125,9 @@ async function main() {
     { nome: 'endereco_cep', tipo: 'VARCHAR(9) NULL' }, { nome: 'endereco_rua', tipo: 'VARCHAR(255) NULL' },
     { nome: 'endereco_numero', tipo: 'VARCHAR(50) NULL' }, { nome: 'endereco_complemento', tipo: 'VARCHAR(100) NULL' },
     { nome: 'endereco_bairro', tipo: 'VARCHAR(100) NULL' }, { nome: 'endereco_cidade', tipo: 'VARCHAR(100) NULL' },
-    { nome: 'endereco_estado', tipo: 'VARCHAR(2) NULL' }
+    { nome: 'endereco_estado', tipo: 'VARCHAR(2) NULL' },
+    { nome: 'frete_metodo', tipo: 'VARCHAR(100) NULL' },
+    { nome: 'prazo_entrega_dias', tipo: 'INT NULL' }
   ];
   for (const coluna of colunasEnderecoPedidos) {
     try {

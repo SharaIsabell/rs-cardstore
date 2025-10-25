@@ -165,7 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
         options.forEach((option, index) => {
             html += `
                 <li>
-                    <input type="radio" id="shipping-${option.id}" name="shipping-option" value="${option.price}" data-name="${option.name}" required ${index === 0 ? 'checked' : ''}>
+                    <input type="radio" id="shipping-${option.id}" name="shipping-option" 
+                           value="${option.price}" 
+                           data-name="${option.name}" 
+                           data-time="${option.delivery_time}" 
+                           required ${index === 0 ? 'checked' : ''}> 
+                    
                     <label for="shipping-${option.id}">
                         <strong>${option.name}</strong> - R$ ${parseFloat(option.price).toFixed(2)} 
                         <em>(Prazo: ${option.delivery_time} dias)</em>
@@ -197,7 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Coleta dados do frete e do endereço
         const shippingInfo = {
             cost: shippingCost,
-            name: selectedShipping.getAttribute('data-name')
+            name: selectedShipping.getAttribute('data-name'),
+            time: parseInt(selectedShipping.dataset.time, 10)
         };
         const addressInfo = {
             cep: cepInput.value,

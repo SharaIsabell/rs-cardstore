@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../database/pooldb');
-
-// novo roteador
+const { enviarEmailStatusPedido } = require('../frontend/js/enviarEmail');
 const { produtosAdminRouter } = require('./produtos-admin'); 
 
 function requireAdminLogin(req, res, next) {
@@ -208,26 +207,64 @@ router.get('/pedidos/:id', requireAdminPin, async (req, res) => {
 
 // Rota para ATUALIZAR o pedido
 router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
-    try {
-        const pedidoId = req.params.id;
-        const { status, codigo_rastreamento } = req.body;
+  const pedidoId = req.params.id;
+  const { status: novoStatus, codigo_rastreamento } = req.body;
+  const connection = await db.getConnection(); // Usar conexão para garantir consistência
 
-        // Se o status não for 'enviado', limpa o código de rastreio
-        const codigoFinal = (status === 'enviado') ? codigo_rastreamento : null;
+  try {
+      await connection.beginTransaction();
 
-        await db.query(
-            `UPDATE pedidos 
-             SET status = ?, codigo_rastreamento = ? 
-             WHERE id = ?`,
-            [status, codigoFinal, pedidoId]
-        );
+      // Busca o status ATUAL e os dados do cliente ANTES de atualizar
+      const [[pedidoAtual]] = await connection.query(
+          `SELECT p.status, u.email, u.nome
+          FROM pedidos p
+          JOIN users u ON p.user_id = u.id
+          WHERE p.id = ? FOR UPDATE`, // Lock para evitar condição de corrida
+          [pedidoId]
+      );
 
-        res.redirect('/admin/pedidos?message=Pedido atualizado com sucesso!');
-    } catch (error) {
-        console.error(`Erro ao atualizar pedido ${req.params.id}:`, error);
-        res.redirect(`/admin/pedidos/${req.params.id}?error=true`);
-    }
-});
+      if (!pedidoAtual) {
+          await connection.rollback();
+          return res.redirect('/admin/pedidos?message=Erro: Pedido não encontrado.');
+      }
+
+      // Se o status não for 'enviado', limpa o código de rastreio
+      const codigoFinal = (novoStatus === 'enviado') ? codigo_rastreamento : null;
+
+      // Atualiza o pedido no banco
+      await connection.query(
+          `UPDATE pedidos
+          SET status = ?, codigo_rastreamento = ?
+          WHERE id = ?`,
+          [novoStatus, codigoFinal, pedidoId]
+      );
+
+      await connection.commit(); // Confirma a atualização no banco
+
+      // Envia o e-mail APÓS confirmar a atualização, SE o status mudou
+      if (pedidoAtual.status !== novoStatus) {
+          // Chama a função de envio de e-mail
+          await enviarEmailStatusPedido(
+              { id: pedidoId }, // Objeto pedido (só precisamos do id aqui)
+              { email: pedidoAtual.email, nome: pedidoAtual.nome }, // Objeto cliente
+              novoStatus, // O novo status que foi definido
+              codigoFinal // O código de rastreio (pode ser null)
+          );
+      } else {
+          console.log(`[INFO] Status do pedido ${pedidoId} não alterado. E-mail não enviado.`);
+      }
+
+      res.redirect('/admin/pedidos?message=Pedido atualizado com sucesso!');
+
+  } catch (error) {
+      await connection.rollback(); // Desfaz a transação em caso de erro
+      console.error(`Erro ao atualizar pedido ${pedidoId}:`, error);
+      // Redireciona de volta para a página de detalhes com uma mensagem de erro
+      res.redirect(`/admin/pedidos/${pedidoId}?error=true&message=Erro ao atualizar pedido.`);
+  } finally {
+      if (connection) connection.release(); // Libera a conexão
+  }
+ });
 
 // Logout do admin
 router.get('/logout', (req, res) => {

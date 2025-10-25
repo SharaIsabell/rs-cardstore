@@ -261,7 +261,7 @@ router.post('/register', async (req, res) => {
   if (req.accepts('json')) {
       return res.status(201).json({ success: true, message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.' });
   }
-
+  // Fallback para renderização normal
   return res.status(201).render('login', {
     errorMessage: null,
     message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.',
@@ -482,7 +482,8 @@ router.post('/process_payment', async (req, res) => {
 
     const { payment_method } = req.body;
     const user_id = req.session.userId;
-    const frete = req.session.frete.cost;
+
+    const frete_info = req.session.frete;
     const endereco_entrega = req.session.endereco_entrega;
     const connection = await db.getConnection();
 
@@ -514,13 +515,12 @@ router.post('/process_payment', async (req, res) => {
           return acc + (precoFinal * item.quantidade);
         }, 0);
         
-        const transaction_amount = subtotal + frete;
+        const transaction_amount = subtotal + frete_info.cost;
         let paymentResult;
         const idempotencyKey = uuidv4();
 
         if (payment_method === 'card' || payment_method === 'pix') {
-            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete, endereco_entrega);
-
+            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete_info, endereco_entrega);
             if (payment_method === 'card') {
                 const { token, issuer_id, payment_method_id, installments, email, identificationType, identificationNumber } = req.body;
                 const card_payment_data = {
@@ -601,13 +601,14 @@ router.post('/process_payment', async (req, res) => {
 });
 
 router.post('/process_payment_bypass', async (req, res) => {
-    // alidação de sessão 
+    // Validação de sessão
     if (!req.session.userId || !req.session.frete || !req.session.endereco_entrega) {
         return res.status(401).json({ success: false, message: 'Sessão inválida ou dados de entrega ausentes.' });
     }
 
     const user_id = req.session.userId;
-    const frete = req.session.frete.cost;
+    // Pegamos o objeto de frete inteiro da sessão
+    const frete_info = req.session.frete;
     const endereco_entrega = req.session.endereco_entrega;
     const connection = await db.getConnection();
 
@@ -640,16 +641,16 @@ router.post('/process_payment_bypass', async (req, res) => {
           const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
           return acc + (precoFinal * item.quantidade);
         }, 0);
-        const transaction_amount = subtotal + frete;
+        // Usamos frete_info.cost para o cálculo
+        const transaction_amount = subtotal + frete_info.cost;
 
-        // Criar Pedido
-        // Criamos o pedido já com status 'pago'
-        const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete, endereco_entrega);
+        // Criar Pedido (Simulação)
+        const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete_info, endereco_entrega);
 
         // Criamos um registro de pagamento fictício aprovado
         await createPaymentRecord(connection, pedido_id, 'credito', 'aprovado', 'TEST_BYPASS_PAYMENT');
                   
-        // Decremento de estoque e notificação (Lógica copiada do /process_payment)
+        // Decremento de estoque e notificação
         for (const item of items) {
             await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
             const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
@@ -691,7 +692,7 @@ router.post('/process_payment_bypass', async (req, res) => {
     }
 });
 
-async function createOrder(connection, user_id, total, items, status, frete, endereco) {
+async function createOrder(connection, user_id, total, items, status, frete_info, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
     
     // Verifica se o usuário já tem um CEP cadastrado
@@ -705,10 +706,14 @@ async function createOrder(connection, user_id, total, items, status, frete, end
         );
     }
 
-    // Insere o pedido com o endereço de entrega específico
+    // Insere o pedido com os dados de frete (custo, método e prazo)
     const [pedidoResult] = await connection.query(
-        'INSERT INTO pedidos (user_id, status, total, frete, endereco_cep, endereco_rua, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [user_id, status, total, frete, cep, rua, numero, complemento, bairro, cidade, estado]
+        `INSERT INTO pedidos (user_id, status, total, frete, frete_metodo, prazo_entrega_dias, 
+                           endereco_cep, endereco_rua, endereco_numero, endereco_complemento, 
+                           endereco_bairro, endereco_cidade, endereco_estado) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, status, total, frete_info.cost, frete_info.name, frete_info.time, 
+         cep, rua, numero, complemento, bairro, cidade, estado]
     );
     const pedido_id = pedidoResult.insertId;
 
@@ -970,13 +975,14 @@ router.get('/meus-pedidos', async (req, res) => {
     try {
         const user_id = req.session.userId;
         
-        // Busca pedidos e a NF associada (se houver)
         const [pedidos] = await db.query(
             `SELECT 
                 p.id, 
                 p.status, 
                 p.total, 
                 DATE_FORMAT(p.criado_em, '%d/%m/%Y') as data_pedido,
+                p.criado_em,
+                p.prazo_entrega_dias,
                 nf.link_arquivo,
                 p.codigo_rastreamento 
              FROM pedidos p
@@ -985,7 +991,6 @@ router.get('/meus-pedidos', async (req, res) => {
              ORDER BY p.criado_em DESC`,
             [user_id]
         );
-
         // Busca os itens de todos os pedidos
         const [itens] = await db.query(
             `SELECT 
@@ -1000,10 +1005,27 @@ router.get('/meus-pedidos', async (req, res) => {
         );
 
         // Agrupa os itens por pedido_id para facilitar a renderização
-        const pedidosComItens = pedidos.map(pedido => ({
-            ...pedido,
-            itens: itens.filter(item => item.pedido_id === pedido.id)
-        }));
+        const pedidosComItens = pedidos.map(pedido => {
+            let data_entrega_estimada = null;
+            
+            // Se tivermos o prazo em dias, calculamos a data de entrega
+            if (pedido.prazo_entrega_dias) {
+                const dataPedido = new Date(pedido.criado_em);
+                // Adiciona os dias de prazo à data do pedido
+                dataPedido.setDate(dataPedido.getDate() + pedido.prazo_entrega_dias);
+                // Formata no estilo "30 de outubro"
+                data_entrega_estimada = dataPedido.toLocaleDateString('pt-BR', {
+                    day: 'numeric',
+                    month: 'long'
+                });
+            }
+
+            return {
+                ...pedido,
+                data_entrega_estimada,
+                itens: itens.filter(item => item.pedido_id === pedido.id)
+            };
+        });
 
         res.render('meus-pedidos', { pedidos: pedidosComItens });
 
