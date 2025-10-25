@@ -9,6 +9,8 @@ const session = require('express-session');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
 const { v4: uuidv4 } = require('uuid');
+const RATE_MINUTES = 5;
+const COOLDOWN_SECONDS = 60;
 
 // Configuração do cliente do Mercado Pago
 const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
@@ -20,186 +22,188 @@ router.use('/mercado-pago-webhook', express.raw({ type: 'application/json' }));
 router.use(express.json());
 
 router.use(session({
-  secret: 'seu-segredo-super-secreto-aqui',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false }
+    secret: 'seu-segredo-super-secreto-aqui',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }
 }));
 
 router.use((req, res, next) => {
-  res.locals.session = req.session;
-  res.locals.mercadoPagoPublicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
-  next();
+    res.locals.session = req.session;
+    res.locals.mercadoPagoPublicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
+    next();
 });
 
 // Isolando admin do usuário
 router.use((req, res, next) => {
-  if (req.session && req.session.isAdmin && req.session.pinValidated) {
-    if (!req.path.startsWith('/admin')) {
-      return res.redirect('/admin');
+    if (req.session && req.session.isAdmin && req.session.pinValidated) {
+        if (!req.path.startsWith('/admin')) {
+            return res.redirect('/admin');
+        }
     }
-  }
-  next();
+    next();
 });
 
-// --- Gerar NF Fictícia ---
+// --- Gerar NF Fictícia (AC2) ---
 async function gerarNotaFiscalFicticia(connection, pedido_id) {
-  try {
-    // Gera um link fictício único
-    const fakeLink = `/pedidos/nf/${uuidv4()}/${pedido_id}.pdf`;
-    await connection.query(
-      'INSERT INTO notas_fiscais (pedido_id, link_arquivo) VALUES (?, ?)',
-      [pedido_id, fakeLink]
-    );
-    return fakeLink;
-  } catch (error) {
-    console.error(`[ERRO NF] Erro ao gerar NF fictícia para pedido ${pedido_id}:`, error);
-    return null; // Continua o processo mesmo se a NF falhar
-  }
+    try {
+        // Gera um link fictício único
+        const fakeLink = `/pedidos/nf/${uuidv4()}/${pedido_id}.pdf`;
+        await connection.query(
+            'INSERT INTO notas_fiscais (pedido_id, link_arquivo) VALUES (?, ?)',
+            [pedido_id, fakeLink]
+        );
+        return fakeLink;
+    } catch (error) {
+        console.error(`[ERRO NF] Erro ao gerar NF fictícia para pedido ${pedido_id}:`, error);
+        return null; // Continua o processo mesmo se a NF falhar
+    }
 }
 
-// --- Enviar E-mail de Confirmação ---
+// --- Enviar E-mail de Confirmação (AC1, AC3, DoD1, DoD3) ---
 async function enviarConfirmacaoEGerarNF(connection, pedido_id) {
-  try {
-    // Gerar Nota Fiscal
-    const linkNF = await gerarNotaFiscalFicticia(connection, pedido_id);
+    try {
+        // 1. Gerar Nota Fiscal (AC2)
+        const linkNF = await gerarNotaFiscalFicticia(connection, pedido_id);
 
-    // Buscar dados completos para o e-mail
-    const [[pedido]] = await connection.query(
-      `SELECT p.*, u.email, u.nome 
+        // 2. Buscar dados completos para o e-mail
+        const [[pedido]] = await connection.query(
+            `SELECT p.*, u.email, u.nome 
        FROM pedidos p 
        JOIN users u ON p.user_id = u.id 
-       WHERE p.id = ?`, 
-      [pedido_id]
-    );
-    
-    const [itens] = await connection.query(
-      `SELECT pi.*, prod.nome 
+       WHERE p.id = ?`,
+            [pedido_id]
+        );
+
+        const [itens] = await connection.query(
+            `SELECT pi.*, prod.nome 
        FROM pedido_itens pi 
        JOIN produtos prod ON pi.produto_id = prod.id 
-       WHERE pi.pedido_id = ?`, 
-      [pedido_id]
-    );
+       WHERE pi.pedido_id = ?`,
+            [pedido_id]
+        );
 
-    if (!pedido) {
-      throw new Error('Pedido não encontrado para envio de e-mail.');
+        if (!pedido) {
+            throw new Error('Pedido não encontrado para envio de e-mail.');
+        }
+
+        // 3. Enviar e-mail de confirmação (AC1, AC3, DoD3)
+        // (Assumindo que a função enviarEmailConfirmacaoPedido existe no módulo importado)
+        await enviarEmailConfirmacaoPedido(pedido, itens, linkNF);
+
+        console.log(`[SUCESSO] E-mail de confirmação e NF gerada para pedido ${pedido_id}.`);
+
+    } catch (error) {
+        console.error(`[ERRO EMAIL/NF] Falha ao processar pós-pagamento para pedido ${pedido_id}:`, error.message);
     }
-    
-    // Enviar e-mail de confirmação 
-    await enviarEmailConfirmacaoPedido(pedido, itens, linkNF);
-    
-    console.log(`[SUCESSO] E-mail de confirmação e NF gerada para pedido ${pedido_id}.`);
-
-  } catch (error) {
-      console.error(`[ERRO EMAIL/NF] Falha ao processar pós-pagamento para pedido ${pedido_id}:`, error.message);
-  }
 }
 
 router.get('/', async (req, res) => {
-  try {
-    const [novosProdutos] = await db.query(
-      `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
+    try {
+        const [novosProdutos] = await db.query(
+            `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
          FROM produtos
         WHERE novo = TRUE
      ORDER BY id DESC
         LIMIT 2`
-    );
-    const idsIgnorados = novosProdutos.length > 0 ? novosProdutos.map(p => p.id) : [0];
-    const [produtosEmPromocao] = await db.query(
-      `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
+        );
+        const idsIgnorados = novosProdutos.length > 0 ? novosProdutos.map(p => p.id) : [0];
+        const [produtosEmPromocao] = await db.query(
+            `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
          FROM produtos
         WHERE desconto_percentual > 0 AND id NOT IN (?)
      ORDER BY desconto_percentual DESC
         LIMIT 2`,
-      [idsIgnorados]
-    );
-    const destaques = [...novosProdutos, ...produtosEmPromocao];
-    res.render('index', { destaques: destaques });
-  } catch (err) {
-    console.error("Erro ao carregar destaques da página inicial:", err);
-    res.render('index', { destaques: [] });
-  }
+            [idsIgnorados]
+        );
+        const destaques = [...novosProdutos, ...produtosEmPromocao];
+        res.render('index', { destaques: destaques });
+    } catch (err) {
+        console.error("Erro ao carregar destaques da página inicial:", err);
+        res.render('index', { destaques: [] });
+    }
 });
 
 async function renderProductPage(req, res, viewName, category, baseUrl) {
-  try {
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = 4; // Limite de 4 produtos por página
-    const offset = (page - 1) * limit;
+    try {
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = 4; // Limite de 4 produtos por página
+        const offset = (page - 1) * limit;
 
-    // Condição WHERE para a consulta
-    const whereClause = category ? `WHERE categoria = ?` : `WHERE promocao = TRUE`;
-    const queryParams = category ? [category] : [];
+        // Condição WHERE para a consulta
+        const whereClause = category ? `WHERE categoria = ?` : `WHERE promocao = TRUE`;
+        const queryParams = category ? [category] : [];
 
-    // Contar o total de produtos para calcular as páginas
-    const [[{ total }]] = await db.query(
-      `SELECT COUNT(*) as total FROM produtos ${whereClause}`,
-      queryParams
-    );
+        // Contar o total de produtos para calcular as páginas
+        const [[{ total }]] = await db.query(
+            `SELECT COUNT(*) as total FROM produtos ${whereClause}`,
+            queryParams
+        );
 
-    const totalPages = Math.ceil(total / limit);
+        const totalPages = Math.ceil(total / limit);
 
-    // Buscar os produtos da página atual
-    const [produtos] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
+        // Buscar os produtos da página atual
+        const [produtos] = await db.query(
+            `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
          FROM produtos 
          ${whereClause}
          ORDER BY id DESC 
          LIMIT ? 
          OFFSET ?`,
-      [...queryParams, limit, offset]
-    );
+            [...queryParams, limit, offset]
+        );
 
-    res.render(viewName, {
-      produtos: produtos,
-      totalPages: totalPages,
-      currentPage: page,
-      baseUrl: baseUrl 
-    });
+        res.render(viewName, {
+            produtos: produtos,
+            totalPages: totalPages,
+            currentPage: page,
+            baseUrl: baseUrl
+        });
 
-  } catch (err) {
-    console.error(`Erro ao carregar produtos para a página ${viewName}:`, err);
-    res.status(500).send(`Erro ao carregar a página de ${viewName}.`);
-  }
+    } catch (err) {
+        console.error(`Erro ao carregar produtos para a página ${viewName}:`, err);
+        res.status(500).send(`Erro ao carregar a página de ${viewName}.`);
+    }
 }
 
 router.get('/magic', (req, res) => {
-  renderProductPage(req, res, 'magic', 'Magic', '/magic');
+    renderProductPage(req, res, 'magic', 'Magic', '/magic');
 });
 
 router.get('/yugioh', (req, res) => {
-  renderProductPage(req, res, 'yugioh', 'Yu-Gi-Oh', '/yugioh');
+    renderProductPage(req, res, 'yugioh', 'Yu-Gi-Oh', '/yugioh');
 });
 
 router.get('/pokemon', (req, res) => {
-  renderProductPage(req, res, 'pokemon', 'Pokemon', '/pokemon');
+    renderProductPage(req, res, 'pokemon', 'Pokemon', '/pokemon');
 });
 
 router.get('/produto/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const [rows] = await db.query(
-      `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, categoria, estoque 
+    try {
+        const { id } = req.params;
+        const [rows] = await db.query(
+            `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, categoria, estoque 
          FROM produtos 
         WHERE id = ?`,
-      [id]
-    );
-    if (rows.length === 0) {
-      return res.status(404).send('Produto não encontrado.');
+            [id]
+        );
+        if (rows.length === 0) {
+            return res.status(404).send('Produto não encontrado.');
+        }
+        res.render('produto', { produto: rows[0] });
+    } catch (err) {
+        console.error('Erro ao carregar o produto:', err);
+        res.status(500).send('Erro ao carregar a página do produto.');
     }
-    res.render('produto', { produto: rows[0] });
-  } catch (err) {
-    console.error('Erro ao carregar o produto:', err);
-    res.status(500).send('Erro ao carregar a página do produto.');
-  }
 });
 
 router.get('/acessorios', (req, res) => {
-  renderProductPage(req, res, 'acessorios', 'Acessorios', '/acessorios');
+    renderProductPage(req, res, 'acessorios', 'Acessorios', '/acessorios');
 });
 
 router.get('/promocoes', (req, res) => {
-  renderProductPage(req, res, 'promocoes', null, '/promocoes');
+    // Passamos 'null' para a categoria, pois o filtro é por 'promocao = TRUE'
+    renderProductPage(req, res, 'promocoes', null, '/promocoes');
 });
 
 router.get('/login', (req, res) => {
@@ -211,174 +215,187 @@ router.get('/login', (req, res) => {
     res.render('login', { message: message, errorMessage: null });
 });
 
-// ROTA DE REGISTRO 
+// ROTA DE REGISTRO MODIFICADA
 router.post('/register', async (req, res) => {
-  const { nome, email, telefone, senha, confirmSenha } = req.body;
-  
-  const respondError = (message) => {
-    if (req.accepts('json')) {
-      return res.status(400).json({ success: false, message });
+    const { nome, email, telefone, senha, confirmSenha } = req.body;
+
+    const respondError = (message) => {
+        if (req.accepts('json')) return res.status(400).json({ success: false, message });
+        return res.status(400).render('login', { message: null, errorMessage: message, showRegister: true });
+    };
+
+    if (senha !== confirmSenha) return respondError('As senhas não coincidem.');
+    if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha))
+        return respondError('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
+
+    const telefoneNumerico = telefone.replace(/\D/g, '');
+    if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11)
+        return respondError('O telefone deve conter 10 ou 11 dígitos numéricos.');
+
+    try {
+        const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+        if (existingUser.length > 0) return respondError('Este e-mail já está cadastrado.');
+
+        const salt = await bcrypt.genSalt(10);
+        const senha_hash = await bcrypt.hash(senha, salt);
+        const token_verificacao = crypto.randomBytes(32).toString('hex');
+        const token_verificacao_expira = new Date(Date.now() + 5 * 60 * 1000); // expira em 1h
+
+        await db.query(
+            'INSERT INTO users (nome, email, telefone, senha_hash, token_verificacao, token_verificacao_expira, email_verificado) VALUES (?, ?, ?, ?, ?, ?, FALSE)',
+            [nome, email, telefoneNumerico, senha_hash, token_verificacao, token_verificacao_expira]
+        );
+
+        await enviarEmailVerificacao(email, token_verificacao);
+        await db.query('UPDATE users SET last_verification_sent_at = NOW() WHERE email = ?', [email]);
+
+        if (req.accepts('json'))
+            return res.status(201).json({ success: true, message: 'Cadastro realizado! Verifique seu e-mail.' });
+
+        return res.status(201).render('login', {
+            errorMessage: null,
+            message: 'Cadastro realizado! Verifique seu e-mail para continuar.',
+            showRegister: false
+        });
+    } catch (error) {
+        console.error('ERRO AO CADASTRAR:', error);
+        return respondError('Erro no servidor ao cadastrar.');
     }
-    return res.status(400).render('login', { 
-        message: null, 
-        errorMessage: message,
-        showRegister: true
-    });
-  };
-
-  if (senha !== confirmSenha) {
-    return respondError('As senhas não coincidem.');
-  }
-
-  if (senha.length < 8 || !/\d/.test(senha) || !/[a-zA-Z]/.test(senha)) {
-    return respondError('A senha deve ter no mínimo 8 caracteres, incluindo letras e números.');
-  }
-
-  const telefoneNumerico = telefone.replace(/\D/g, '');
-  if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) {
-    return respondError('O telefone deve conter 10 ou 11 dígitos numéricos.');
-  }
-
-  try {
-    const [existingUser] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existingUser.length > 0) {
-      return respondError('Este e-mail já está cadastrado.');
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const senha_hash = await bcrypt.hash(senha, salt);
-    const token_verificacao = crypto.randomBytes(32).toString('hex');
-    const token_verificacao_expira = new Date(Date.now() + 5 * 60 * 1000);
-    
-    await db.query(
-      'INSERT INTO users (nome, email, telefone, senha_hash, token_verificacao, token_verificacao_expira) VALUES (?, ?, ?, ?, ?, ?)',
-      [nome, email, telefoneNumerico, senha_hash, token_verificacao, token_verificacao_expira]
-    );
-
-    await enviarEmailVerificacao(email, token_verificacao);
-    
-  // Ao cadastrar com sucesso, renderize a página de login com uma mensagem de sucesso
-  if (req.accepts('json')) {
-      return res.status(201).json({ success: true, message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.' });
-  }
-  // Fallback para renderização normal
-  return res.status(201).render('login', {
-    errorMessage: null,
-    message: 'Cadastro realizado com sucesso! Por favor, verifique seu e-mail para continuar.',
-    showRegister: false
-  });
-
-  } catch (error) {
-    console.error('ERRO DETALHADO AO CADASTRAR:', error);
-    return respondError('Ocorreu um erro no servidor ao tentar realizar o cadastro.');
-  }
 });
 
 router.get('/verificar-email', async (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token) {
-      return res.status(400).send('Token de verificação não fornecido.');
+    try {
+        const { token } = req.query;
+        if (!token) {
+            return res.status(400).render('verificacao_expirada', { email: '', cooldown: 0 });
+        }
+
+        // Busca o usuário pelo token
+        const [users] = await db.query(
+            'SELECT id, email, token_verificacao_expira, email_verificado FROM users WHERE token_verificacao = ?',
+            [token]
+        );
+
+        if (users.length === 0) {
+            return res.status(400).render('verificacao_expirada', { email: '', cooldown: 0 });
+        }
+
+        const user = users[0];
+
+        // Se já estiver verificado, apenas redireciona
+        if (user.email_verificado) {
+            return res.redirect('/login?status=verificado');
+        }
+
+        const expiraEm = new Date(
+            typeof user.token_verificacao_expira === 'string'
+                ? user.token_verificacao_expira.replace(' ', 'T') // corrige formato 'YYYY-MM-DD HH:MM:SS'
+                : user.token_verificacao_expira
+        );
+
+        const agora = new Date();
+
+        console.log('🔎 DEBUG: Agora:', agora);
+        console.log('🔎 DEBUG: Expira em:', expiraEm);
+
+        if (agora > expiraEm) {
+            console.log(`[TOKEN EXPIRADO] Token de ${user.email} expirou em ${expiraEm.toISOString()}`);
+            return res.status(400).render('verificacao_expirada', { email: user.email, cooldown: 0 });
+        }
+
+        await db.query(
+            'UPDATE users SET email_verificado = TRUE, token_verificacao = NULL, token_verificacao_expira = NULL WHERE id = ?',
+            [user.id]
+        );
+
+        console.log(`[TOKEN OK] E-mail ${user.email} verificado com sucesso.`);
+        return res.redirect('/login?status=verificado');
+    } catch (error) {
+        console.error('[ERRO AO VERIFICAR E-MAIL]:', error);
+        return res.status(500).render('verificacao_expirada', { email: '', cooldown: 0 });
     }
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE token_verificacao = ? AND token_verificacao_expira > NOW()',
-      [token]
-    );
-    if (users.length === 0) {
-      return res.status(400).send('Token de verificação inválido ou expirado.');
-    }
-    const user = users[0];
-    await db.query(
-      'UPDATE users SET email_verificado = TRUE, token_verificacao = NULL, token_verificacao_expira = NULL WHERE id = ?',
-      [user.id]
-    );
-    res.redirect('/login?status=verificado');
-  } catch (error) {
-    console.error('ERRO AO VERIFICAR E-MAIL:', error);
-    res.status(500).send('Ocorreu um erro no servidor ao tentar verificar o e-mail.');
-  }
 });
 
 router.post('/login', async (req, res) => {
-  try {
-    const { email, senha } = req.body;
+    try {
+        const { email, senha } = req.body;
 
-// Tenta o ADMIN primeiro
-{
-  const [admins] = await db.query(
-    'SELECT id, email, password_hash, is_active FROM admins WHERE email = ?',
-    [email]
-  );
+        // 1) Tenta o ADMIN primeiro
+        {
+            const [admins] = await db.query(
+                'SELECT id, email, password_hash, is_active FROM admins WHERE email = ?',
+                [email]
+            );
 
-  if (admins.length > 0 && admins[0].is_active === 1) {
-    const ok = await bcrypt.compare(senha, admins[0].password_hash);
-    if (ok) {
-      return req.session.regenerate(err => {
-        if (err) {
-          console.error('Erro ao regenerar sessão (admin):', err);
-          return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
+            if (admins.length > 0 && admins[0].is_active === 1) {
+                const ok = await bcrypt.compare(senha, admins[0].password_hash);
+                if (ok) {
+                    return req.session.regenerate(err => {
+                        if (err) {
+                            console.error('Erro ao regenerar sessão (admin):', err);
+                            return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
+                        }
+
+                        // flags de admin
+                        req.session.isAdmin = true;
+                        req.session.adminId = admins[0].id;
+                        req.session.adminEmail = admins[0].email;
+
+                        // limpa flags de cliente para evitar dados do usuário (uma forma de ter segurança)
+                        delete req.session.userId;
+                        delete req.session.userName;
+                        delete req.session.canAccessCheckout;
+                        delete req.session.frete;
+                        delete req.session.freteInfo;
+                        delete req.session.pagamento;
+
+                        // Gera PIN de 6 dígitos por sessão e exige confirmação
+                        req.session.adminPin = String(Math.floor(100000 + Math.random() * 900000));
+                        req.session.pinValidated = false;
+
+                        return req.session.save(() => res.redirect('/admin/pin'));
+                    });
+                }
+            }
+        }
+        // 2) Não é admin (ou senha incorreta) -> segue fluxo de CLIENTE
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
         }
 
-        // flags de admin
-        req.session.isAdmin = true;
-        req.session.adminId = admins[0].id;
-        req.session.adminEmail = admins[0].email;
+        const user = users[0];
+        const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
+        if (!senhaCorreta) {
+            return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
+        }
 
-        // limpa flags de cliente para evitar dados do usuário
-        delete req.session.userId;
-        delete req.session.userName;
-        delete req.session.canAccessCheckout;
-        delete req.session.frete;
-        delete req.session.freteInfo;
-        delete req.session.pagamento;
+        if (!user.email_verificado) {
+            return res.status(403).render('login', { message: null, errorMessage: 'Por favor, verifique seu e-mail antes de fazer o login.' });
+        }
 
-        // Gera PIN de 6 dígitos por sessão e exige confirmação
-        req.session.adminPin = String(Math.floor(100000 + Math.random() * 900000));
-        req.session.pinValidated = false;
+        // Regenera sessão p/ cliente
+        req.session.regenerate(err => {
+            if (err) {
+                console.error('Erro ao regenerar sessão (cliente):', err);
+                return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
+            }
 
-        return req.session.save(() => res.redirect('/admin/pin'));
-      });
+            req.session.userId = user.id;
+            req.session.userName = user.nome;
+
+            // Garante que NÃO é admin
+            req.session.isAdmin = false;
+            delete req.session.adminId;
+            delete req.session.adminEmail;
+
+            return req.session.save(() => res.redirect('/'));
+        });
+
+    } catch (error) {
+        console.error('ERRO DETALHADO AO FAZER LOGIN:', error);
+        res.status(500).render('login', { message: null, errorMessage: 'Ocorreu um erro no servidor ao tentar fazer login.' });
     }
-  }
-}
-    // Não é admin (ou senha incorreta) -> segue fluxo de CLIENTE
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
-      return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
-    }
-
-    const user = users[0];
-    const senhaCorreta = await bcrypt.compare(senha, user.senha_hash);
-    if (!senhaCorreta) {
-      return res.status(401).render('login', { message: null, errorMessage: 'E-mail ou senha inválidos.' });
-    }
-
-    if (!user.email_verificado) {
-      return res.status(403).render('login', { message: null, errorMessage: 'Por favor, verifique seu e-mail antes de fazer o login.' });
-    }
-
-    // Regenera sessão p/ cliente
-    req.session.regenerate(err => {
-      if (err) {
-        console.error('Erro ao regenerar sessão (cliente):', err);
-        return res.status(500).render('login', { message: null, errorMessage: 'Erro no servidor.' });
-      }
-
-      req.session.userId = user.id;
-      req.session.userName = user.nome;
-
-      // Garante que NÃO é admin
-      req.session.isAdmin = false;
-      delete req.session.adminId;
-      delete req.session.adminEmail;
-
-      return req.session.save(() => res.redirect('/'));
-    });
-
-  } catch (error) {
-    console.error('ERRO DETALHADO AO FAZER LOGIN:', error);
-    res.status(500).render('login', { message: null, errorMessage: 'Ocorreu um erro no servidor ao tentar fazer login.' });
-  }
 });
 
 router.get('/logout', (req, res) => {
@@ -390,15 +407,15 @@ router.get('/logout', (req, res) => {
     });
 });
 
-// --- Buscar endereço do usuário ---
+// --- NOVA ROTA: Buscar endereço do usuário ---
 router.get('/api/get-address', async (req, res) => {
     if (!req.session.userId) {
         return res.status(401).json({ success: false, message: 'Não autenticado.' });
     }
     try {
-        // Seleciona as novas colunas de endereço
+        // CORREÇÃO: Seleciona as novas colunas de endereço
         const [users] = await db.query(
-            'SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM users WHERE id = ?', 
+            'SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM users WHERE id = ?',
             [req.session.userId]
         );
 
@@ -424,7 +441,7 @@ router.get('/api/get-address', async (req, res) => {
     }
 });
 
-// ROTA CHECKOUT 
+// ROTA CHECKOUT MODIFICADA
 router.get('/checkout', async (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login');
@@ -438,7 +455,7 @@ router.get('/checkout', async (req, res) => {
     try {
         const [userRows] = await db.query('SELECT nome, email FROM users WHERE id = ?', [req.session.userId]);
         if (userRows.length === 0) return res.redirect('/login');
-        
+
         const user = userRows[0];
 
         const [cart] = await db.query('SELECT id FROM carrinhos WHERE user_id = ?', [req.session.userId]);
@@ -457,7 +474,7 @@ router.get('/checkout', async (req, res) => {
             const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
             return acc + (precoFinal * item.quantidade);
         }, 0);
-        
+
         const frete = req.session.frete.cost;
         const frete_metodo = req.session.frete.name;
         const endereco_entrega = req.session.endereco_entrega;
@@ -492,7 +509,7 @@ router.post('/process_payment', async (req, res) => {
 
         const [cart] = await connection.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
         if (cart.length === 0) throw new Error('Carrinho não encontrado.');
-        
+
         const carrinho_id = cart[0].id;
         const [items] = await connection.query(`
             SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.desconto_percentual
@@ -511,10 +528,10 @@ router.post('/process_payment', async (req, res) => {
         }
 
         const subtotal = items.reduce((acc, item) => {
-          const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
-          return acc + (precoFinal * item.quantidade);
+            const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
+            return acc + (precoFinal * item.quantidade);
         }, 0);
-        
+
         const transaction_amount = subtotal + frete_info.cost;
         let paymentResult;
         const idempotencyKey = uuidv4();
@@ -530,38 +547,38 @@ router.post('/process_payment', async (req, res) => {
                 paymentResult = await payment.create({ body: card_payment_data, requestOptions: { idempotencyKey } });
 
                 if (paymentResult.status === 'approved') {
-                  await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
-                  await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
-                  
-                  // Decremento de estoque e notificação
-                  for (const item of items) {
-                    await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
-                    const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
-                    const prevEstoque = updatedProduct.estoque + item.quantidade;
+                    await connection.query("UPDATE pedidos SET status = 'pago' WHERE id = ?", [pedido_id]);
+                    await createPaymentRecord(connection, pedido_id, payment_method_id.includes('deb') ? 'debito' : 'credito', 'aprovado', paymentResult.id);
 
-                    // LOW: cruzou de >5 para 1..5
-                    if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
-                      await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
-                      await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                    // NOVO: Decremento de estoque e notificação
+                    for (const item of items) {
+                        await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
+                        const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
+                        const prevEstoque = updatedProduct.estoque + item.quantidade;
+
+                        // LOW: cruzou de >5 para 1..5
+                        if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
+                            await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
+                            await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                        }
+
+                        // OUT: chegou a 0
+                        if (updatedProduct.estoque === 0) {
+                            await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
+                            await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                            await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                        }
                     }
 
-                    // OUT: chegou a 0
-                    if (updatedProduct.estoque === 0) {
-                      await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
-                      await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
-                      await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
-                    }
-                  }
+                    await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
 
-                  await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
-                  
-                  // Dispara o e-mail e gera a NF para pagamento com cartão
-                  await enviarConfirmacaoEGerarNF(connection, pedido_id);
+                    // Dispara o e-mail e gera a NF para pagamento com cartão
+                    await enviarConfirmacaoEGerarNF(connection, pedido_id);
 
-                  delete req.session.frete;
-                  delete req.session.endereco_entrega;
-                  await connection.commit();
-                  return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
+                    delete req.session.frete;
+                    delete req.session.endereco_entrega;
+                    await connection.commit();
+                    return res.status(201).json({ success: true, message: 'Pagamento aprovado!', orderId: pedido_id });
                 } else {
                     await connection.rollback();
                     return res.status(400).json({ success: false, message: `Pagamento recusado: ${paymentResult.status_detail}`, status: paymentResult.status_detail });
@@ -575,11 +592,11 @@ router.post('/process_payment', async (req, res) => {
                 };
                 paymentResult = await payment.create({ body: pix_payment_data, requestOptions: { idempotencyKey } });
                 await createPaymentRecord(connection, pedido_id, 'pix', 'pendente', paymentResult.id);
-                
+
                 delete req.session.frete;
                 delete req.session.endereco_entrega;
                 await connection.commit();
-                
+
                 return res.status(201).json({
                     success: true, payment_method: 'pix',
                     qr_code: paymentResult.point_of_interaction.transaction_data.qr_code_base64,
@@ -601,12 +618,13 @@ router.post('/process_payment', async (req, res) => {
 });
 
 router.post('/process_payment_bypass', async (req, res) => {
-    // Validação de sessão
+    // 1. Validação de sessão (essencial)
     if (!req.session.userId || !req.session.frete || !req.session.endereco_entrega) {
         return res.status(401).json({ success: false, message: 'Sessão inválida ou dados de entrega ausentes.' });
     }
 
     const user_id = req.session.userId;
+    // --- MODIFICAÇÃO ---
     // Pegamos o objeto de frete inteiro da sessão
     const frete_info = req.session.frete;
     const endereco_entrega = req.session.endereco_entrega;
@@ -615,10 +633,10 @@ router.post('/process_payment_bypass', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Busca carrinho
+        // 2. Busca carrinho
         const [cart] = await connection.query('SELECT id FROM carrinhos WHERE user_id = ?', [user_id]);
         if (cart.length === 0) throw new Error('Carrinho não encontrado.');
-        
+
         const carrinho_id = cart[0].id;
         const [items] = await connection.query(`
             SELECT ci.produto_id, ci.quantidade, p.nome, p.preco, p.desconto_percentual
@@ -627,7 +645,7 @@ router.post('/process_payment_bypass', async (req, res) => {
         );
         if (items.length === 0) throw new Error('Carrinho vazio.');
 
-        // Verificação de estoque
+        // 3. Verificação de estoque (ESSENCIAL)
         for (const item of items) {
             const [[product]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ? FOR UPDATE', [item.produto_id]);
             if (!product || product.estoque < item.quantidade) {
@@ -636,51 +654,54 @@ router.post('/process_payment_bypass', async (req, res) => {
             }
         }
 
-        // Calcular total
+        // 4. Calcular total
         const subtotal = items.reduce((acc, item) => {
-          const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
-          return acc + (precoFinal * item.quantidade);
+            const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
+            return acc + (precoFinal * item.quantidade);
         }, 0);
+        // --- MODIFICAÇÃO ---
         // Usamos frete_info.cost para o cálculo
         const transaction_amount = subtotal + frete_info.cost;
 
-        // Criar Pedido (Simulação)
+        // 5. Criar Pedido (Simulação)
+        // --- MODIFICAÇÃO ---
+        // Passamos o objeto frete_info completo
         const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete_info, endereco_entrega);
 
         // Criamos um registro de pagamento fictício aprovado
         await createPaymentRecord(connection, pedido_id, 'credito', 'aprovado', 'TEST_BYPASS_PAYMENT');
-                  
-        // Decremento de estoque e notificação
+
+        // 6. Decremento de estoque e notificação (Lógica copiada do /process_payment)
         for (const item of items) {
-            await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
-            const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
+            await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
+            const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
             const prevEstoque = updatedProduct.estoque + item.quantidade;
 
             if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
-              await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
-              await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
+                await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
             }
             if (updatedProduct.estoque === 0) {
-              await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
-              await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
-              await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
+                await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
             }
         }
 
-        // Limpar carrinho
+        // 7. Limpar carrinho
         await connection.query('DELETE FROM carrinho_itens WHERE carrinho_id = ?', [carrinho_id]);
-        
-        // Disparar o e-mail e gerar a NF
+
+        // 8. Disparar o e-mail e gerar a NF
         await enviarConfirmacaoEGerarNF(connection, pedido_id);
 
-        // Limpar sessão
+        // 9. Limpar sessão
         delete req.session.frete;
         delete req.session.endereco_entrega;
-        
-        // Commit
+
+        // 10. Commit
         await connection.commit();
-        
-        // Sucesso
+
+        // 11. Sucesso
         return res.status(201).json({ success: true, message: 'Pagamento de teste aprovado!', orderId: pedido_id });
 
     } catch (error) {
@@ -694,26 +715,26 @@ router.post('/process_payment_bypass', async (req, res) => {
 
 async function createOrder(connection, user_id, total, items, status, frete_info, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
-    
-    // Verifica se o usuário já tem um CEP cadastrado
+
+    // CORREÇÃO: Verifica se o usuário já tem um CEP cadastrado
     const [[currentUser]] = await connection.query('SELECT cep FROM users WHERE id = ?', [user_id]);
-    
+
     // Se o usuário não tiver um endereço principal, salva este como principal
     if (!currentUser || !currentUser.cep) {
         await connection.query(
-            'UPDATE users SET cep = ?, logradouro = ?, numero = ?, complemento = ?, bairro = ?, cidade = ?, estado = ? WHERE id = ?', 
+            'UPDATE users SET cep = ?, logradouro = ?, numero = ?, complemento = ?, bairro = ?, cidade = ?, estado = ? WHERE id = ?',
             [cep, rua, numero, complemento, bairro, cidade, estado, user_id]
         );
     }
 
-    // Insere o pedido com os dados de frete (custo, método e prazo)
+    // Insere o pedido com os novos dados de frete (custo, método e prazo)
     const [pedidoResult] = await connection.query(
         `INSERT INTO pedidos (user_id, status, total, frete, frete_metodo, prazo_entrega_dias, 
                            endereco_cep, endereco_rua, endereco_numero, endereco_complemento, 
                            endereco_bairro, endereco_cidade, endereco_estado) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [user_id, status, total, frete_info.cost, frete_info.name, frete_info.time, 
-         cep, rua, numero, complemento, bairro, cidade, estado]
+        [user_id, status, total, frete_info.cost, frete_info.name, frete_info.time,
+            cep, rua, numero, complemento, bairro, cidade, estado]
     );
     const pedido_id = pedidoResult.insertId;
 
@@ -741,12 +762,12 @@ async function createPaymentRecord(connection, pedido_id, metodo, status, mp_pay
 // Rota de Confirmação
 router.get('/pedido/confirmacao/:id', async (req, res) => {
     if (!req.session.userId) return res.redirect('/login');
-    
+
     try {
         const pedido_id = req.params.id;
         const user_id = req.session.userId;
 
-        // Busca também os dados de endereço do pedido
+        // ATUALIZAÇÃO: Busca também os dados de endereço do pedido
         const [pedidos] = await db.query(
             `SELECT p.*, DATE_FORMAT(p.criado_em, '%d/%m/%Y %H:%i') as data_pedido,
                     pag.metodo, pag.status as status_pagamento
@@ -755,7 +776,7 @@ router.get('/pedido/confirmacao/:id', async (req, res) => {
              WHERE p.id = ? AND p.user_id = ?`,
             [pedido_id, user_id]
         );
-        
+
         if (pedidos.length === 0) return res.status(404).send('Pedido não encontrado.');
 
         const [itens] = await db.query(
@@ -939,10 +960,10 @@ router.post('/carrinho/salvar-frete-e-endereco', (req, res) => {
     if (!shipping || !address || typeof shipping.cost !== 'number' || typeof shipping.name !== 'string') {
         return res.status(400).json({ error: 'Dados de entrega inválidos.' });
     }
-    
+
     req.session.frete = shipping;
     req.session.endereco_entrega = address;
-    
+
     res.json({ success: true, message: 'Dados de entrega salvos na sessão.' });
 });
 
@@ -971,10 +992,11 @@ router.get('/meus-pedidos', async (req, res) => {
     if (!req.session.userId) {
         return res.redirect('/login');
     }
-    
+
     try {
         const user_id = req.session.userId;
-        
+
+        // Adicionado p.codigo_rastreamento à consulta
         const [pedidos] = await db.query(
             `SELECT 
                 p.id, 
@@ -1007,7 +1029,7 @@ router.get('/meus-pedidos', async (req, res) => {
         // Agrupa os itens por pedido_id para facilitar a renderização
         const pedidosComItens = pedidos.map(pedido => {
             let data_entrega_estimada = null;
-            
+
             // Se tivermos o prazo em dias, calculamos a data de entrega
             if (pedido.prazo_entrega_dias) {
                 const dataPedido = new Date(pedido.criado_em);
@@ -1022,7 +1044,7 @@ router.get('/meus-pedidos', async (req, res) => {
 
             return {
                 ...pedido,
-                data_entrega_estimada,
+                data_entrega_estimada, // Adiciona a nova propriedade
                 itens: itens.filter(item => item.pedido_id === pedido.id)
             };
         });
@@ -1208,7 +1230,7 @@ router.get('/pedidos/nf/:uuid/:id.pdf', (req, res) => {
                 border-color: #2a3b52;
             }
             body.dark-mode .btn-primary {
-                color: #0D1B2A; 
+                color: #0D1B2A; /* Texto escuro no botão laranja */
             }
             body.dark-mode .btn-secondary {
                 background-color: var(--color-gray-light);
@@ -1270,7 +1292,7 @@ router.get('/pedidos/nf/:uuid/:id.pdf', (req, res) => {
         
         <script>
             function downloadTxt() {
-                // Define o conteúdo do arquivo TXT
+                // 1. Define o conteúdo do arquivo TXT
                 const content = \`
 Resumo do Pedido - RS Card Store
 ---------------------------------
@@ -1283,23 +1305,23 @@ Documento ID (NF): ${documentoId}
 (Em um sistema real, aqui estariam todos os itens, preços e dados do cliente)
                 \`;
 
-                // Cria um objeto "Blob" (um arquivo em memória)
+                // 2. Cria um objeto "Blob" (um arquivo em memória)
                 const blob = new Blob([content.trim()], { type: 'text/plain' });
 
-                // Cria um link <a> invisível
+                // 3. Cria um link <a> invisível
                 const a = document.createElement('a');
                 
-                // Cria uma URL para o Blob e a define como href do link
+                // 4. Cria uma URL para o Blob e a define como href do link
                 a.href = URL.createObjectURL(blob);
                 
-                // Define o nome do arquivo que será baixado
+                // 5. Define o nome do arquivo que será baixado
                 a.download = 'pedido_${pedidoId}.txt';
                 
-                // Simula o clique no link para iniciar o download
+                // 6. Simula o clique no link para iniciar o download
                 document.body.appendChild(a);
                 a.click();
                 
-                // Remove o link da memória
+                // 7. Remove o link da memória
                 document.body.removeChild(a);
                 URL.revokeObjectURL(a.href);
             }
@@ -1314,12 +1336,12 @@ router.post('/mercado-pago-webhook', async (req, res) => {
     console.log('--- NOVO WEBHOOK RECEBIDO ---');
     try {
         const notification = JSON.parse(req.body.toString('utf8'));
-        
+
         if (notification.type === 'payment' && notification.data && notification.data.id) {
             const paymentId = notification.data.id;
             const paymentInfo = await payment.get({ id: paymentId });
 
-            if (paymentInfo && paymentInfo.status === 'approved'){
+            if (paymentInfo && paymentInfo.status === 'approved') {
                 const mp_payment_id = paymentInfo.id;
                 const connection = await db.getConnection();
                 try {
@@ -1339,22 +1361,22 @@ router.post('/mercado-pago-webhook', async (req, res) => {
                         // Decremento de estoque para pagamentos via webhook (PIX)
                         const [items] = await connection.query('SELECT produto_id, quantidade FROM pedido_itens WHERE pedido_id = ?', [pedido_id]);
                         for (const item of items) {
-                          await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?',[item.quantidade, item.produto_id]);
-                          const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?',[item.produto_id]);
-                          const prevEstoque = updatedProduct.estoque + item.quantidade;
+                            await connection.query('UPDATE produtos SET estoque = estoque - ? WHERE id = ?', [item.quantidade, item.produto_id]);
+                            const [[updatedProduct]] = await connection.query('SELECT nome, estoque FROM produtos WHERE id = ?', [item.produto_id]);
+                            const prevEstoque = updatedProduct.estoque + item.quantidade;
 
-                          // LOW: cruzou de >5 para 1..5
-                          if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
-                            await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
-                            await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
-                          }
+                            // LOW: cruzou de >5 para 1..5
+                            if (prevEstoque > 5 && updatedProduct.estoque > 0 && updatedProduct.estoque <= 5) {
+                                await enviarEmailAlertaEstoque(updatedProduct, 'LOW');
+                                await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                            }
 
-                          // OUT: chegou a 0 (sempre avisa)
-                          if (updatedProduct.estoque === 0) {
-                            await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
-                            await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
-                            await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
-                          }
+                            // OUT: chegou a 0 (sempre avisa)
+                            if (updatedProduct.estoque === 0) {
+                                await enviarEmailAlertaEstoque(updatedProduct, 'OUT');
+                                await connection.query('UPDATE produtos SET out_of_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                                await connection.query('UPDATE produtos SET low_stock_notified = 1 WHERE id = ?', [item.produto_id]);
+                            }
                         }
 
                         await connection.commit();
@@ -1372,6 +1394,45 @@ router.post('/mercado-pago-webhook', async (req, res) => {
     } catch (error) {
         console.error('[ERRO GERAL] Erro ao processar webhook:', error);
         res.status(500).send('Erro no webhook.');
+    }
+});
+
+router.post('/resend-verification', async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ ok: false, message: 'E-mail inválido.' });
+
+        const [[user]] = await db.query(
+            'SELECT id, email_verificado, last_verification_sent_at FROM users WHERE email = ?',
+            [email]
+        );
+
+        if (!user) return res.status(404).json({ ok: false, message: 'Usuário não encontrado.' });
+        if (user.email_verificado) return res.json({ ok: true, message: 'E-mail já verificado.' });
+
+        const agora = new Date();
+        if (user.last_verification_sent_at) {
+            const diff = (agora - new Date(user.last_verification_sent_at)) / 1000;
+            if (diff < 60) {
+                const restante = Math.ceil(60 - diff);
+                return res.status(429).json({ ok: false, message: `Aguarde ${restante}s para reenviar.`, cooldown: restante });
+            }
+        }
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expira = new Date(Date.now() + 5 * 60 * 1000);
+
+        await db.query(
+            'UPDATE users SET token_verificacao = ?, token_verificacao_expira = ?, last_verification_sent_at = NOW() WHERE id = ?',
+            [token, expira, user.id]
+        );
+
+        await enviarEmailVerificacao(email, token);
+
+        return res.json({ ok: true, message: 'Novo link enviado para seu e-mail.', cooldown: 60 });
+    } catch (err) {
+        console.error('[resend-verification]', err);
+        return res.status(500).json({ ok: false, message: 'Erro ao reenviar link.' });
     }
 });
 

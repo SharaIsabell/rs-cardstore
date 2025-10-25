@@ -1,4 +1,4 @@
-require('dotenv').config({ path: __dirname + './../.env' }); 
+require('dotenv').config({ path: __dirname + './../.env' });
 const mysql = require('mysql2/promise');
 
 async function main() {
@@ -111,7 +111,7 @@ async function main() {
     { nome: 'cep', tipo: 'VARCHAR(9) NULL' }, { nome: 'logradouro', tipo: 'VARCHAR(255) NULL' },
     { nome: 'numero', tipo: 'VARCHAR(20) NULL' }, { nome: 'complemento', tipo: 'VARCHAR(100) NULL' },
     { nome: 'bairro', tipo: 'VARCHAR(100) NULL' }, { nome: 'cidade', tipo: 'VARCHAR(100) NULL' },
-    { nome: 'estado', tipo: 'VARCHAR(2) NULL' }
+    { nome: 'estado', tipo: 'VARCHAR(2) NULL' }, { nome: 'last_verification_sent_at', tipo: 'DATETIME NULL' }
   ];
   for (const coluna of colunasEnderecoUsers) {
     try {
@@ -119,6 +119,13 @@ async function main() {
     } catch (error) {
       if (error.code !== 'ER_DUP_FIELDNAME') console.warn(`Aviso em 'users':`, error.message);
     }
+  }
+  try {
+    await connection.query(
+      "ALTER TABLE users ADD COLUMN last_verification_sent_at DATETIME NULL;"
+    );
+  } catch (e) {
+    if (e.code !== 'ER_DUP_FIELDNAME') console.warn('[users] last_verification_sent_at:', e.message);
   }
 
   const colunasEnderecoPedidos = [
@@ -136,7 +143,6 @@ async function main() {
       if (error.code !== 'ER_DUP_FIELDNAME') console.warn(`Aviso em 'pedidos':`, error.message);
     }
   }
-  
   try {
     await connection.query("ALTER TABLE users DROP COLUMN endereco;");
     console.log("Coluna 'endereco' removida de 'users' com sucesso.");
@@ -148,12 +154,12 @@ async function main() {
 
   // --- ALTERAÇÕES NA TABELA PAGAMENTOS ---
   try {
-      await connection.query("ALTER TABLE pagamentos MODIFY COLUMN status ENUM('aprovado', 'recusado', 'pendente');");
-      await connection.query("ALTER TABLE pagamentos ADD COLUMN mp_payment_id VARCHAR(255);");
-    } catch (error) {
-      if (error.code !== 'ER_DUP_FIELDNAME' && error.code !== 'ER_DUP_COLUMN_NAME') {
-        console.warn("Aviso ao rodar ALTER TABLE:", error.message);
-      }
+    await connection.query("ALTER TABLE pagamentos MODIFY COLUMN status ENUM('aprovado', 'recusado', 'pendente');");
+    await connection.query("ALTER TABLE pagamentos ADD COLUMN mp_payment_id VARCHAR(255);");
+  } catch (error) {
+    if (error.code !== 'ER_DUP_FIELDNAME' && error.code !== 'ER_DUP_COLUMN_NAME') {
+      console.warn("Aviso ao rodar ALTER TABLE:", error.message);
+    }
   }
 
   console.log("Banco de dados e tabelas criados com sucesso!");

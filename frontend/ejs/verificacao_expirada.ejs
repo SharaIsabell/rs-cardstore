@@ -1,0 +1,191 @@
+<!-- Carrega os estilos principais da loja que já existem -->
+<link rel="stylesheet" href="/css/theme.css">
+<link rel="stylesheet" href="/css/index.css">
+<link rel="stylesheet" href="/css/login.css">
+
+<style>
+  main.verify-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    background-color: var(--azul-escuro, #0a1744);
+  }
+
+  .verify-card {
+    background: #fff;
+    color: #222;
+    max-width: 480px;
+    width: 90%;
+    border-radius: 18px;
+    box-shadow: 0 6px 25px rgba(0,0,0,0.25);
+    text-align: center;
+    padding: 45px 30px;
+    margin: 40px auto;
+    animation: fadeIn 0.5s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .verify-card h1 {
+    font-family: "Montserrat", sans-serif;
+    color: #0a1744;
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  .verify-card p {
+    color: #555;
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .verify-card .verify-email {
+    font-weight: 600;
+    color: #0a1744;
+    margin-bottom: 25px;
+    font-size: 1.05rem;
+  }
+
+  .verify-btn {
+    background-color: #ff9f1c;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.25s ease, transform 0.2s ease;
+  }
+
+  .verify-btn:hover {
+    background-color: #ffa93b;
+    transform: translateY(-2px);
+  }
+
+  .verify-btn:disabled {
+    background-color: #aaa;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  .verify-hint {
+    display: block;
+    color: #777;
+    margin-top: 10px;
+    font-size: 0.9rem;
+  }
+
+  .verify-alert {
+    display: none;
+    margin-top: 18px;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  .verify-alert.success {
+    display: block;
+    background-color: #eaf7ea;
+    color: #1b5e20;
+    border: 1px solid #a5d6a7;
+  }
+
+  .verify-alert.error {
+    display: block;
+    background-color: #fdeaea;
+    color: #b71c1c;
+    border: 1px solid #ef9a9a;
+  }
+</style>
+
+<main class="verify-wrapper">
+  <div class="verify-card">
+    <h1>Seu link de verificação expirou</h1>
+    <p>Podemos enviar um novo link para você no e-mail:</p>
+    <p class="verify-email"><%= email %></p>
+
+    <form id="resendForm" data-email="<%= email %>" data-cooldown="<%= (typeof cooldown !== 'undefined' ? cooldown : 0) %>">
+      <button id="resendBtn" type="submit" class="verify-btn">Enviar novo link</button>
+      <small id="cooldownHint" class="verify-hint" style="display:none;"></small>
+    </form>
+
+    <div id="alertBox" class="verify-alert"></div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const form = document.getElementById('resendForm');
+  const btn  = document.getElementById('resendBtn');
+  const msg  = document.getElementById('alertBox');
+  const hint = document.getElementById('cooldownHint');
+  const email = form.dataset.email;
+  const initialCooldown = Number(form.dataset.cooldown || 0);
+  let inFlight = false;
+  let timer = null;
+
+  if (initialCooldown > 0 && !Number.isNaN(initialCooldown)) startCooldown(initialCooldown);
+
+  function show(type, text) {
+    msg.className = 'verify-alert ' + (type === 'ok' ? 'success' : 'error');
+    msg.textContent = text;
+  }
+
+  function setDisabled(v) {
+    btn.disabled = v;
+    btn.textContent = v ? 'Enviando...' : 'Enviar novo link';
+  }
+
+  function startCooldown(sec) {
+    clearInterval(timer);
+    let remaining = sec;
+    setDisabled(true);
+    hint.style.display = 'block';
+    hint.textContent = `Aguarde ${remaining}s para reenviar.`;
+    timer = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(timer);
+        hint.style.display = 'none';
+        setDisabled(false);
+      } else {
+        hint.textContent = `Aguarde ${remaining}s para reenviar.`;
+      }
+    }, 1000);
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (inFlight || btn.disabled) return;
+    inFlight = true;
+    msg.style.display = 'none';
+    setDisabled(true);
+    try {
+      const r = await fetch('/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await r.json();
+      if (r.ok && data.ok) {
+        show('ok', data.message || 'Novo link enviado para seu e-mail.');
+        startCooldown(Number(data.cooldown || 60));
+      } else {
+        show('err', data.message || 'Não foi possível enviar agora.');
+        if (data.cooldown) startCooldown(Number(data.cooldown));
+        else setDisabled(false);
+      }
+    } catch {
+      show('err', 'Erro de rede ao reenviar link.');
+      setDisabled(false);
+    } finally { inFlight = false; }
+  });
+})();
+</script>
+
