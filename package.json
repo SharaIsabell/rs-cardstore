@@ -1,5 +1,5 @@
 {
-  "name": "secret",
+  "name": "rs-cardstore",
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
@@ -9,15 +9,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SharaIsabell/secret.git"
+    "url": "git+https://github.com/SharaIsabell/rs-cardstore.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/SharaIsabell/secret/issues"
+    "url": "https://github.com/SharaIsabell/rs-cardstore/issues"
   },
-  "homepage": "https://github.com/SharaIsabell/secret#readme",
+  "homepage": "https://github.com/SharaIsabell/rs-cardstore#readme",
   "description": "",
   "dependencies": {
     "axios": "^1.11.0",
