@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Conta - RS Card Store</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../css/index.css">
+    </head>
+<body>
+    <%- include('partials/header') %>
+    
+    <main class="container section">
+        <h1 class="section-title">Minha Conta</h1>
+
+        <% if (messages.success) { %>
+            <div class="form-message form-message-success">
+                <i class="fa-solid fa-check-circle"></i> <%= messages.success %>
+            </div>
+        <% } %>
+        <% if (messages.error) { %>
+            <div class="form-message form-message-error">
+                <i class="fa-solid fa-times-circle"></i> <%= messages.error %>
+            </div>
+        <% } %>
+
+        <div class="profile-container">
+            
+            <div class="profile-column">
+                
+                <div class="profile-card">
+                    <h3><i class="fa-solid fa-user-pen"></i> Meus Dados</h3>
+                    <form action="/minha-conta/perfil" method="POST" class="profile-form">
+                        <div class="form-group">
+                            <label for="nome">Nome Completo</label>
+                            <input type="text" id="nome" name="nome" value="<%= user.nome %>" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">E-mail</label>
+                            <input type="email" id="email" name="email" value="<%= user.email %>" readonly disabled>
+                            <small>O e-mail não pode ser alterado.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="telefone">Telefone (com DDD)</label>
+                            <input type="tel" id="telefone" name="telefone" value="<%= user.telefone %>" placeholder="(XX) 9XXXX-XXXX" required>
+                        </div>
+                        <button type="submit" class="cta-button">Salvar Dados</button>
+                    </form>
+                </div>
+
+                <div class="profile-card">
+                    <h3><i class="fa-solid fa-key"></i> Alterar Senha</h3>
+                    <form action="/minha-conta/senha" method="POST" class="profile-form">
+                        <div class="form-group">
+                            <label for="senha_atual">Senha Atual</label>
+                            <input type="password" id="senha_atual" name="senha_atual" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nova_senha">Nova Senha</label>
+                            <input type="password" id="nova_senha" name="nova_senha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmar_nova_senha">Confirmar Nova Senha</label>
+                            <input type="password" id="confirmar_nova_senha" name="confirmar_nova_senha" required>
+                        </div>
+                        <button type="submit" class="cta-button cta-button-secondary">Alterar Senha</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="profile-column">
+                
+                <div class="profile-card">
+                    <h3><i class="fa-solid fa-map-location-dot"></i> Adicionar Novo Endereço</h3>
+                    <form action="/minha-conta/endereco" method="POST" class="profile-form" id="form-add-endereco">
+                        <div class="form-group">
+                            <label for="apelido">Apelido (Ex: Casa, Trabalho)</label>
+                            <input type="text" id="apelido" name="apelido" required>
+                        </div>
+                        <div class="form-group-inline">
+                            <div class="form-group" style="flex-grow: 1;">
+                                <label for="cep">CEP</label>
+                                <input type="text" id="cep" name="cep" required>
+                            </div>
+                            <button type="button" class="cta-button cta-button-inline" id="btn-buscar-cep">
+                                <i class="fa-solid fa-magnifying-glass"></i> Buscar
+                            </button>
+                        </div>
+                        <div class="form-group">
+                            <label for="logradouro">Logradouro (Rua, Av.)</label>
+                            <input type="text" id="logradouro" name="logradouro" required>
+                        </div>
+                        <div class="form-group-inline">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="numero">Número</label>
+                                <input type="text" id="numero" name="numero" required>
+                            </div>
+                            <div class="form-group" style="flex: 2;">
+                                <label for="complemento">Complemento</label>
+                                <input type="text" id="complemento" name="complemento">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="bairro">Bairro</label>
+                            <input type="text" id="bairro" name="bairro" required>
+                        </div>
+                        <div class="form-group-inline">
+                            <div class="form-group" style="flex: 3;">
+                                <label for="cidade">Cidade</label>
+                                <input type="text" id="cidade" name="cidade" required>
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="estado">Estado (UF)</label>
+                                <input type="text" id="estado" name="estado" maxlength="2" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="cta-button">Adicionar Endereço</button>
+                    </form>
+                </div>
+
+                <h3 class="section-subtitle">Meus Endereços Salvos</h3>
+                <div class="address-list">
+                    <% if (enderecos.length === 0) { %>
+                        <p>Nenhum endereço cadastrado.</p>
+                    <% } else { %>
+                        <% enderecos.forEach(addr => { %>
+                            <div class="address-card <%= addr.is_principal ? 'principal' : '' %>">
+                                <div class="address-card-header">
+                                    <strong><%= addr.apelido %></strong>
+                                    <% if (addr.is_principal) { %>
+                                        <span class="address-badge">
+                                            <i class="fa-solid fa-star"></i> Principal
+                                        </span>
+                                    <% } %>
+                                </div>
+                                <div class="address-card-body">
+                                    <p>
+                                        <%= addr.logradouro %>, <%= addr.numero %>
+                                        <%= addr.complemento ? ' - ' + addr.complemento : '' %>
+                                    </p>
+                                    <p><%= addr.bairro %> - <%= addr.cidade %> / <%= addr.estado %></p>
+                                    <p>CEP: <%= addr.cep %></p>
+                                </div>
+                                <div class="address-card-actions">
+                                    <% if (!addr.is_principal) { %>
+                                        <form action="/minha-conta/endereco/definir-principal/<%= addr.id %>" method="POST">
+                                            <button type="submit" class="btn-text">Definir como Principal</button>
+                                        </form>
+                                    <% } %>
+                                    <form action="/minha-conta/endereco/remover/<%= addr.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja remover este endereço?');">
+                                        <button type="submit" class="btn-text btn-danger">Remover</button>
+                                    </form>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } %>
+                </div>
+
+            </div>
+        </div>
+    </main>
+    
+    <%- include('partials/footer') %>
+    <script src="/js/theme.js"></script>
+    <script src="/js/meu-perfil.js"></script> 
+</body>
+</html>

@@ -31,8 +31,21 @@ router.use(session({
 router.use((req, res, next) => {
     res.locals.session = req.session;
     res.locals.mercadoPagoPublicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
+    res.locals.getMessages = () => {
+        const messages = req.session.messages || {};
+        req.session.messages = {}; 
+        return messages;
+    };
     next();
 });
+
+// --- NOVO MIDDLEWARE: Proteção de Rotas ---
+const isAuthenticated = (req, res, next) => {
+    if (req.session.userId) {
+        return next();
+    }
+    res.redirect('/login');
+};
 
 // Isolando admin do usuário
 router.use((req, res, next) => {
@@ -407,36 +420,30 @@ router.get('/logout', (req, res) => {
     });
 });
 
-// --- NOVA ROTA: Buscar endereço do usuário ---
-router.get('/api/get-address', async (req, res) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ success: false, message: 'Não autenticado.' });
-    }
+router.get('/api/get-address', isAuthenticated, async (req, res) => {
+    // Agora busca o endereço principal da nova tabela
     try {
-        // CORREÇÃO: Seleciona as novas colunas de endereço
-        const [users] = await db.query(
-            'SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM users WHERE id = ?',
+        const [enderecos] = await db.query(
+            'SELECT * FROM user_enderecos WHERE user_id = ? AND is_principal = TRUE',
             [req.session.userId]
         );
 
-        if (users.length > 0 && users[0].cep) {
-            // Monta um objeto de endereço para enviar ao front-end
+        if (enderecos.length > 0) {
+            const principal = enderecos[0];
             const address = {
-                cep: users[0].cep,
-                rua: users[0].logradouro, // O front-end espera 'rua'
-                numero: users[0].numero,
-                complemento: users[0].complemento,
-                bairro: users[0].bairro,
-                cidade: users[0].cidade,
-                estado: users[0].estado,
+                cep: principal.cep,
+                rua: principal.logradouro,
+                numero: principal.numero,
+                complemento: principal.complemento,
+                bairro: principal.bairro,
+                cidade: principal.cidade,
+                estado: principal.estado,
             };
-            // O front-end espera um JSON stringificado, então mantemos esse padrão
             res.json({ success: true, address: JSON.stringify(address) });
         } else {
-            res.json({ success: false, message: 'Nenhum endereço cadastrado.' });
-        }
+            res.json({ success: false, message: 'Nenhum endereço principal cadastrado.' });        }
     } catch (error) {
-        console.error('Erro ao buscar endereço:', error);
+        console.error('Erro ao buscar endereço principal:', error);
         res.status(500).json({ success: false, message: 'Erro no servidor.' });
     }
 });
@@ -713,19 +720,12 @@ router.post('/process_payment_bypass', async (req, res) => {
     }
 });
 
+// --- ROTA MODIFICADA: createOrder ---
 async function createOrder(connection, user_id, total, items, status, frete_info, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
 
-    // CORREÇÃO: Verifica se o usuário já tem um CEP cadastrado
-    const [[currentUser]] = await connection.query('SELECT cep FROM users WHERE id = ?', [user_id]);
-
-    // Se o usuário não tiver um endereço principal, salva este como principal
-    if (!currentUser || !currentUser.cep) {
-        await connection.query(
-            'UPDATE users SET cep = ?, logradouro = ?, numero = ?, complemento = ?, bairro = ?, cidade = ?, estado = ? WHERE id = ?',
-            [cep, rua, numero, complemento, bairro, cidade, estado, user_id]
-        );
-    }
+    // A lógica de salvar o endereço na tabela 'users' foi REMOVIDA
+    // O endereço de entrega agora é salvo apenas no pedido.
 
     // Insere o pedido com os novos dados de frete (custo, método e prazo)
     const [pedidoResult] = await connection.query(
@@ -1435,5 +1435,246 @@ router.post('/resend-verification', async (req, res) => {
         return res.status(500).json({ ok: false, message: 'Erro ao reenviar link.' });
     }
 });
+
+// --- NOVAS ROTAS: MINHA CONTA / PERFIL ---
+
+// 1. GET: Exibe a página "Minha Conta"
+router.get('/minha-conta', isAuthenticated, async (req, res) => {
+    try {
+        const [userRows] = await db.query(
+            'SELECT nome, email, telefone FROM users WHERE id = ?',
+            [req.session.userId]
+        );
+        const [enderecos] = await db.query(
+            'SELECT * FROM user_enderecos WHERE user_id = ? ORDER BY is_principal DESC, id ASC',
+            [req.session.userId]
+        );
+
+        if (userRows.length === 0) {
+            return res.redirect('/logout');
+        }
+
+        res.render('meu-perfil', {
+            user: userRows[0],
+            enderecos: enderecos,
+            messages: res.locals.getMessages() 
+        });
+
+    } catch (error) {
+        console.error('Erro ao carregar Minha Conta:', error);
+        res.status(500).send('Erro ao carregar sua página de perfil.');
+    }
+});
+
+// 2. POST: Atualiza dados básicos (Nome, Telefone)
+router.post('/minha-conta/perfil', isAuthenticated, async (req, res) => {
+    const { nome, telefone } = req.body;
+    const telefoneNumerico = telefone.replace(/\D/g, '');
+
+    if (telefoneNumerico.length < 10 || telefoneNumerico.length > 11) {
+        req.session.messages = { error: 'O telefone deve conter 10 ou 11 dígitos.' };
+        return res.redirect('/minha-conta');
+    }
+
+    try {
+        await db.query(
+            'UPDATE users SET nome = ?, telefone = ? WHERE id = ?',
+            [nome, telefoneNumerico, req.session.userId]
+        );
+        req.session.messages = { success: 'Dados atualizados com sucesso!' };
+        req.session.userName = nome;
+        res.redirect('/minha-conta');
+    } catch (error) {
+        console.error('Erro ao atualizar perfil:', error);
+        req.session.messages = { error: 'Erro ao atualizar seus dados.' };
+        res.redirect('/minha-conta');
+    }
+});
+
+// 3. POST: Altera a senha
+router.post('/minha-conta/senha', isAuthenticated, async (req, res) => {
+    const { senha_atual, nova_senha, confirmar_nova_senha } = req.body;
+
+    if (nova_senha !== confirmar_nova_senha) {
+        req.session.messages = { error: 'As novas senhas não coincidem.' };
+        return res.redirect('/minha-conta');
+    }
+    
+    if (nova_senha.length < 8 || !/\d/.test(nova_senha) || !/[a-zA-Z]/.test(nova_senha)) {
+        req.session.messages = { error: 'A nova senha deve ter no mínimo 8 caracteres, com letras e números.' };
+        return res.redirect('/minha-conta');
+    }
+
+    try {
+        const [users] = await db.query('SELECT senha_hash FROM users WHERE id = ?', [req.session.userId]);
+        if (users.length === 0) return res.redirect('/logout');
+
+        const user = users[0];
+        const senhaCorreta = await bcrypt.compare(senha_atual, user.senha_hash);
+
+        if (!senhaCorreta) {
+            req.session.messages = { error: 'A senha atual está incorreta.' };
+            return res.redirect('/minha-conta');
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const nova_senha_hash = await bcrypt.hash(nova_senha, salt);
+
+        await db.query('UPDATE users SET senha_hash = ? WHERE id = ?', [nova_senha_hash, req.session.userId]);
+        
+        req.session.messages = { success: 'Senha alterada com sucesso!' };
+        res.redirect('/minha-conta');
+
+    } catch (error) {
+        console.error('Erro ao alterar senha:', error);
+        req.session.messages = { error: 'Erro no servidor ao tentar alterar a senha.' };
+        res.redirect('/minha-conta');
+    }
+});
+
+// 4. POST: Adiciona um novo endereço
+router.post('/minha-conta/endereco', isAuthenticated, async (req, res) => {
+    const { apelido, cep, logradouro, numero, complemento, bairro, cidade, estado } = req.body;
+    const user_id = req.session.userId;
+
+    try {
+        // Verifica se já existe algum endereço
+        const [[{ count }]] = await db.query(
+            'SELECT COUNT(*) as count FROM user_enderecos WHERE user_id = ?', 
+            [user_id]
+        );
+        
+        // Se for o primeiro, define como principal
+        const is_principal = count === 0;
+
+        await db.query(
+            `INSERT INTO user_enderecos 
+             (user_id, is_principal, apelido, cep, logradouro, numero, complemento, bairro, cidade, estado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [user_id, is_principal, apelido, cep, logradouro, numero, complemento, bairro, cidade, estado]
+        );
+        
+        req.session.messages = { success: 'Endereço adicionado com sucesso!' };
+        res.redirect('/minha-conta');
+    } catch (error) {
+        console.error('Erro ao adicionar endereço:', error);
+        req.session.messages = { error: 'Erro ao adicionar endereço.' };
+        res.redirect('/minha-conta');
+    }
+});
+
+// 5. POST: Define um endereço como principal (Requer transação)
+router.post('/minha-conta/endereco/definir-principal/:id', isAuthenticated, async (req, res) => {
+    const endereco_id = req.params.id;
+    const user_id = req.session.userId;
+    const connection = await db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+        
+        // 1. Remove 'principal' de todos os endereços do usuário
+        await connection.query(
+            'UPDATE user_enderecos SET is_principal = FALSE WHERE user_id = ?',
+            [user_id]
+        );
+        
+        // 2. Define o novo endereço como 'principal'
+        await connection.query(
+            'UPDATE user_enderecos SET is_principal = TRUE WHERE id = ? AND user_id = ?',
+            [endereco_id, user_id]
+        );
+        
+        await connection.commit();
+        req.session.messages = { success: 'Endereço principal atualizado!' };
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Erro ao definir endereço principal:', error);
+        req.session.messages = { error: 'Erro ao atualizar endereço principal.' };
+    } finally {
+        connection.release();
+        res.redirect('/minha-conta');
+    }
+});
+
+// 6. POST: Remove um endereço
+router.post('/minha-conta/endereco/remover/:id', isAuthenticated, async (req, res) => {
+    const endereco_id = req.params.id;
+    const user_id = req.session.userId;
+    
+    try {
+        // Verifica se o endereço a ser removido é o principal
+        const [[endereco]] = await db.query(
+            'SELECT is_principal FROM user_enderecos WHERE id = ? AND user_id = ?',
+            [endereco_id, user_id]
+        );
+
+        if (!endereco) {
+            req.session.messages = { error: 'Endereço não encontrado.' };
+            return res.redirect('/minha-conta');
+        }
+
+        await db.query('DELETE FROM user_enderecos WHERE id = ? AND user_id = ?', [endereco_id, user_id]);
+        
+        // Se era o principal, define outro (o mais antigo) como principal
+        if (endereco.is_principal) {
+            const [outrosEnderecos] = await db.query(
+                'SELECT id FROM user_enderecos WHERE user_id = ? ORDER BY id ASC LIMIT 1',
+                [user_id]
+            );
+            if (outrosEnderecos.length > 0) {
+                await db.query('UPDATE user_enderecos SET is_principal = TRUE WHERE id = ?', [outrosEnderecos[0].id]);
+            }
+        }
+        
+        req.session.messages = { success: 'Endereço removido com sucesso!' };
+        res.redirect('/minha-conta');
+    } catch (error) {
+        console.error('Erro ao remover endereço:', error);
+        req.session.messages = { error: 'Erro ao remover endereço.' };
+        res.redirect('/minha-conta');
+    }
+});
+
+// 7. GET (API): Busca dados de um endereço para edição
+router.get('/api/minha-conta/endereco/:id', isAuthenticated, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const [rows] = await db.query(
+            'SELECT * FROM user_enderecos WHERE id = ? AND user_id = ?',
+            [id, req.session.userId]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Endereço não encontrado.' });
+        }
+        res.json({ success: true, endereco: rows[0] });
+    } catch (error) {
+        console.error('Erro ao buscar endereço por API:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor.' });
+    }
+});
+
+// 8. POST: Atualiza (Edita) um endereço
+router.post('/minha-conta/endereco/editar/:id', isAuthenticated, async (req, res) => {
+    const { id } = req.params;
+    const user_id = req.session.userId;
+    const { apelido, cep, logradouro, numero, complemento, bairro, cidade, estado } = req.body;
+
+    try {
+        await db.query(
+            `UPDATE user_enderecos SET 
+             apelido = ?, cep = ?, logradouro = ?, numero = ?, complemento = ?, 
+             bairro = ?, cidade = ?, estado = ?
+             WHERE id = ? AND user_id = ?`,
+            [apelido, cep, logradouro, numero, complemento, bairro, cidade, estado, id, user_id]
+        );
+        req.session.messages = { success: 'Endereço atualizado com sucesso!' };
+    } catch (error) {
+        console.error('Erro ao editar endereço:', error);
+        req.session.messages = { error: 'Erro ao atualizar o endereço.' };
+    }
+    res.redirect('/minha-conta');
+});
+
 
 module.exports = router;

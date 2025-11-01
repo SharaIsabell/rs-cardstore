@@ -1,3 +1,4 @@
+/* --- Variáveis de Cor e Estilos Globais --- */
 :root {
     --color-blue-dark: #0A2463;
     --color-orange-vibrant: #FF9F1C;
@@ -6,15 +7,17 @@
     --color-text: #333;
     --font-heading: 'Montserrat', sans-serif;
     --font-body: 'Lato', sans-serif;
+    
+    /* Transição suave de cores */
     --theme-transition: all 0.5s ease;
 }
 
 /* Variáveis para o Modo Escuro */
 body.dark-mode {
-    --color-blue-dark: #e0e0e0;
-    --color-white: #0D1B2A; 
-    --color-gray-light: #1B263B; 
-    --color-text: #E0E1E2; 
+    --color-blue-dark: #e0e0e0; /* O "azul" no modo escuro será um cinza claro para textos */
+    --color-white: #0D1B2A; /* O "branco" (fundo principal) será um azul bem escuro */
+    --color-gray-light: #1B263B; /* O "cinza claro" (fundo de seções) será um azul mais escuro */
+    --color-text: #E0E1E2; /* O "texto" principal será um cinza claro */
 }
 
 * {
@@ -49,7 +52,7 @@ main.container.section > *:last-child {
     width: 90%;
     max-width: 1200px;
     margin: 0 auto;
-    position: relative;
+    position: relative; /* Garante que o conteúdo fique sobre as cartas */
     z-index: 2;
 }
 
@@ -91,11 +94,38 @@ main.container.section > *:last-child {
 }
 
 .main-nav a {
-    margin: 0 1rem;
+    /* Margem horizontal reduzida para 0.75rem (de 1rem) */
+    margin: 0 0.75rem; 
     text-decoration: none;
     color: var(--color-blue-dark);
     font-weight: 700;
     transition: color 0.3s ease;
+    
+    /* Garante que o texto do link não quebre (ex: "Magic: The Gathering") */
+    white-space: nowrap; 
+}
+
+/* --- NOVAS REGRAS PARA O LAYOUT DO HEADER --- */
+
+/* Diz ao container de navegação para ser flexível */
+.main-nav {
+    flex: 1 1 auto; /* Cresce e encolhe (como filho do header-content) */
+    overflow: hidden; /* Esconde links se não couberem */
+    
+    /* --- ADIÇÕES --- */
+    display: flex; /* Torna o .main-nav um container flex */
+    justify-content: center; /* Centraliza os links <a> dentro dele */
+    flex-wrap: nowrap; /* Impede que os links <a> quebrem a linha */
+}
+
+/* Garante que os links não quebrem a linha dentro da navegação */
+.main-nav a {
+    white-space: nowrap; /* Impede que o texto do link quebre a linha */
+}
+
+/* Diz ao container de ações para NÃO encolher */
+.header-actions {
+    flex-shrink: 0; 
 }
 
 .main-nav a:hover {
@@ -106,7 +136,7 @@ main.container.section > *:last-child {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 1.5rem; 
+    gap: 1.5rem; /* Cria um espaço entre os ícones e o switch */
 }
 
 .header-actions a {
@@ -114,7 +144,7 @@ main.container.section > *:last-child {
     color: var(--color-blue-dark);
     text-decoration: none;
     transition: color 0.3s ease;
-    line-height: 1; 
+    line-height: 1; /* Melhora o alinhamento vertical */
 }
 
 .header-actions a:hover {
@@ -133,7 +163,7 @@ main.container.section > *:last-child {
 
 .hero-content {
     position: relative;
-    z-index: 2;
+    z-index: 2; /* Garante que o texto fique na frente das cartas */
 }
 
 .hero h1 {
@@ -195,9 +225,9 @@ main.container.section > *:last-child {
 
 .floating-cards .card {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.1); 
-    border: 1px solid rgba(255, 255, 255, 0.3); 
-    width: 120px; 
+    background-color: rgba(255, 255, 255, 0.1); /* Cor de fundo semi-transparente */
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Borda sutil */
+    width: 120px; /* Tamanho da carta */
     height: 180px;
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
@@ -498,7 +528,7 @@ input:checked + .slider:before {
     font-size: 1rem;
     left: 8px;
     opacity: 1;
-    color: var(--color-blue-dark);
+    color: var(--color-blue-dark); /* << CORRIGIDO: Lua escura no tema claro */
 }
 
 .slider .fa-sun {
@@ -509,7 +539,7 @@ input:checked + .slider:before {
     font-size: 1rem;
     right: 8px;
     opacity: 0;
-    color: var(--color-white); 
+    color: var(--color-white); /* Sol branco no tema escuro (correto) */
 }
 
 input:checked + .slider .fa-moon {
@@ -576,7 +606,7 @@ input:checked + .slider .fa-sun {
 /* --- Responsividade --- */
 @media (max-width: 992px) {
     .main-nav {
-        display: none;
+        display: none; /* Em um projeto real, seria um menu hambúrguer */
     }
     .hero h1 {
         font-size: 2.8rem;
@@ -590,7 +620,7 @@ input:checked + .slider .fa-sun {
 }
 @media (max-width: 768px) {
     .header-content {
-        flex-direction: column;
+        flex-direction: column; /* Este comando força o empilhamento */
         gap: 1rem;
     }
     .hero {
@@ -615,6 +645,7 @@ input:checked + .slider .fa-sun {
 /* --- ESTILOS PÁGINA DE PRODUTOS (MAGIC E OUTRAS) --- */
 /* ====================================================== */
 
+/* --- Banner da Página (Hero) --- */
 .page-hero {
     padding: 100px 0;
     text-align: center;
@@ -622,10 +653,11 @@ input:checked + .slider .fa-sun {
     background-size: cover;
     background-position: center;
     position: relative;
-    overflow: hidden; 
+    overflow: hidden; /* Garante que as cartas flutuantes não escapem */
     border-bottom: 5px solid var(--color-orange-vibrant);
 }
 
+/* [CORRIGIDO] Usa as variáveis de gradiente e opacidade */
 .page-hero::before {
     content: '';
     position: absolute;
@@ -633,8 +665,9 @@ input:checked + .slider .fa-sun {
     left: 0;
     width: 100%;
     height: 100%;
+    /* USA O GRADIENTE DA HOME, QUE SE ADAPTA AO TEMA */
     background: linear-gradient(110deg, var(--gradient-start), var(--gradient-end));
-    opacity: 0.95; 
+    opacity: 0.95; /* Controla a visibilidade da imagem de fundo */
     z-index: 1;
     transition: var(--theme-transition);
 }
@@ -658,9 +691,11 @@ input:checked + .slider .fa-sun {
     opacity: 0.9;
 }
 
+/* Fundo específico para a página de Magic */
 .magic-hero {
     background-image: url('https://images.ctfassets.net/s5n2t79q9d70/4OIM49Qp5gEa2e8Ie2m2eC/22375b0a708235e16ed5361362b85e09/Magic-The-Gathering-Logo-Hero-Desktop-2.jpg');
 }
+
 
 /* --- Barra de Ferramentas (Filtros e Ordenação) --- */
 .product-toolbar {
@@ -754,43 +789,46 @@ input:checked + .slider .fa-sun {
 .header-actions .user-greeting {
     font-weight: 700;
     color: var(--color-blue-dark);
-    margin-right: 1rem;
+    font-size: 1rem; 
 }
 
+/* --- Ajuste da Borda do Card de Produto para Modo Escuro --- */
 body.dark-mode .product-card {
-    border: 1px solid #2a3b52; 
+    border: 1px solid #2a3b52; /* Um tom de azul-escuro sutilmente mais claro que o fundo */
 }
 
+/* --- 1. Corrige o texto nos cards "Navegue por Jogo" --- */
 body.dark-mode .category-card {
-    color: #FFFFFF; 
+    color: #FFFFFF; /* Define o texto principal do card (ex: "Magic: The Gathering") para branco */
 }
 
 body.dark-mode .category-card-content .btn-secondary {
-    color: #FFFFFF; 
-    border-color: rgba(255, 255, 255, 0.8); 
+    color: #FFFFFF; /* Garante que o texto do botão "Ver Produtos" seja branco */
+    border-color: rgba(255, 255, 255, 0.8); /* Deixa a borda do botão mais visível */
 }
 
 body.dark-mode .category-card-content .btn-secondary:hover {
-    color: var(--color-white);
+    color: var(--color-white); /* No hover, o fundo fica claro e o texto escuro */
 }
 
+/* --- 2. Corrige o fundo E o texto do Rodapé --- */
 body.dark-mode .main-footer {
-    background-color: #08121a; 
-    color: #E0E1E2; 
+    background-color: #0D1B2A; /* Um azul ainda mais escuro para o rodapé, para diferenciar do corpo */
+    color: #E0E1E2; /* Define a cor padrão do texto do rodapé (ex: "Formas de Pagamento") para cinza claro */
 }
 
 body.dark-mode .footer-column h4 {
-    color: #FFFFFF; 
+    color: #FFFFFF; /* Títulos das colunas em branco para maior destaque */
 }
 
 body.dark-mode .footer-column ul a,
 body.dark-mode .social-icons a {
-    color: #a9a9b3; 
+    color: #a9a9b3; /* Links com uma cor cinza um pouco mais suave */
 }
 
 body.dark-mode .footer-column ul a:hover,
 body.dark-mode .social-icons a:hover {
-    color: var(--color-orange-vibrant); 
+    color: var(--color-orange-vibrant); /* Mantém o laranja vibrante no hover */
 }
 
 body.dark-mode .footer-bottom {
@@ -807,4 +845,391 @@ body.dark-mode .footer-bottom {
   border-radius:999px;
   background: var(--accent, #ff9f1c);
   color:#0b1b3b;
+}
+
+/* ====================================================== */
+/* --- ESTILOS PÁGINA MINHA CONTA / PERFIL --- */
+/* ====================================================== */
+
+.profile-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 40px;
+}
+
+@media (min-width: 992px) {
+    .profile-container {
+        grid-template-columns: 1fr 1.2fr; /* Coluna de endereço um pouco maior */
+    }
+}
+
+.profile-column {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.profile-card {
+    background-color: var(--color-white);
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: var(--theme-transition);
+    overflow: hidden; /* Garante que o padding funcione com o border-radius */
+}
+
+.profile-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    color: var(--color-blue-dark);
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.profile-card h3 i {
+    color: var(--color-orange-vibrant);
+}
+
+.profile-form {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--color-text);
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="tel"],
+.form-group input[type="password"] {
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    background-color: var(--color-white);
+    color: var(--color-text);
+    transition: var(--theme-transition);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--color-orange-vibrant);
+    box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.2);
+}
+
+.form-group input:disabled {
+    background-color: var(--color-gray-light);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.form-group small {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end; /* Alinha o botão de CEP */
+}
+
+.cta-button-secondary {
+    background-color: var(--color-blue-dark);
+    border-color: var(--color-blue-dark);
+}
+.cta-button-secondary:hover {
+    background-color: #081c4a;
+    border-color: #081c4a;
+}
+
+.cta-button-inline {
+    padding: 14px 1.2rem; /* Mesma altura dos inputs */
+    white-space: nowrap;
+}
+
+/* Mensagens de Alerta (Flash) */
+.form-message {
+    padding: 1.5rem;
+    border-radius: 8px;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.1rem;
+}
+.form-message-success {
+    background-color: #e6f9f0;
+    border: 1px solid #a3e9c7;
+    color: #0a6c40;
+}
+.form-message-error {
+    background-color: #fdebee;
+    border: 1px solid #f8c0c8;
+    color: #a91e32;
+}
+
+/* Lista de Endereços */
+.section-subtitle {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    color: var(--color-blue-dark);
+    margin-top: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-orange-vibrant);
+}
+
+.address-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.address-card {
+    background-color: var(--color-white);
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: var(--theme-transition);
+}
+
+.address-card.principal {
+    border-left: 5px solid var(--color-orange-vibrant);
+}
+
+.address-card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px dashed #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.address-card-header strong {
+    font-size: 1.2rem;
+    color: var(--color-blue-dark);
+}
+
+.address-badge {
+    background-color: var(--color-orange-vibrant);
+    color: var(--color-white);
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.3rem 0.8rem;
+    border-radius: 99px;
+}
+
+.address-card-body {
+    padding: 1.5rem;
+    line-height: 1.6;
+}
+.address-card-body p {
+    margin: 0;
+    margin-bottom: 0.5rem;
+}
+.address-card-body p:last-child {
+    margin-bottom: 0;
+}
+
+.address-card-actions {
+    padding: 1rem 1.5rem;
+    background-color: var(--color-gray-light);
+    border-top: 1px solid #eee;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 1.5rem;
+}
+.address-card-actions form {
+    margin: 0;
+}
+
+.btn-text {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--color-blue-dark);
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+.btn-text:hover {
+    color: var(--color-orange-vibrant);
+}
+.btn-text.btn-danger {
+    color: #e74c3c;
+}
+.btn-text.btn-danger:hover {
+    color: #c0392b;
+}
+
+
+/* Dark Mode para Perfil */
+body.dark-mode .profile-card {
+    background-color: var(--color-gray-light);
+    border-color: #2a3b52;
+}
+body.dark-mode .profile-card h3 {
+    color: var(--color-blue-dark); /* Texto claro */
+    border-bottom-color: #2a3b52;
+}
+body.dark-mode .form-group label {
+    color: var(--color-text);
+}
+body.dark-mode .form-group input[type="text"],
+body.dark-mode .form-group input[type="email"],
+body.dark-mode .form-group input[type="tel"],
+body.dark-mode .form-group input[type="password"] {
+    background-color: var(--color-white); /* Fundo azul escuro */
+    color: var(--color-text);
+    border-color: #2a3b52;
+}
+body.dark-mode .form-group input:disabled {
+    background-color: #0D1B2A; /* Um pouco mais escuro */
+}
+body.dark-mode .form-group small {
+    color: #999;
+}
+body.dark-mode .cta-button-secondary {
+    background-color: var(--color-blue-dark); /* Texto claro */
+    color: var(--color-white); /* Fundo escuro */
+    border-color: var(--color-blue-dark);
+}
+body.dark-mode .cta-button-secondary:hover {
+    opacity: 0.8;
+}
+body.dark-mode .form-message-success {
+    background-color: #0a3d24;
+    border-color: #1a6e43;
+    color: #b9f3d9;
+}
+body.dark-mode .form-message-error {
+    background-color: #4d1018;
+    border-color: #a02c3d;
+    color: #f8c0c8;
+}
+body.dark-mode .section-subtitle {
+    color: var(--color-blue-dark); /* Texto claro */
+}
+body.dark-mode .address-card {
+    background-color: var(--color-gray-light);
+    border-color: #2a3b52;
+}
+body.dark-mode .address-card-header {
+    border-bottom-color: #2a3b52;
+}
+body.dark-mode .address-card-header strong {
+    color: var(--color-blue-dark); /* Texto claro */
+}
+body.dark-mode .address-badge {
+    color: var(--color-white); /* Fundo escuro */
+}
+body.dark-mode .address-card-actions {
+    background-color: var(--color-white); /* Fundo escuro */
+    border-top-color: #2a3b52;
+}
+body.dark-mode .btn-text {
+    color: var(--color-blue-dark); /* Texto claro */
+}
+body.dark-mode .btn-text:hover {
+    color: var(--color-orange-vibrant);
+}
+body.dark-mode .btn-text.btn-danger {
+    color: #ff8a80;
+}
+body.dark-mode .btn-text.btn-danger:hover {
+    color: #e74c3c;
+}
+
+/* ====================================================== */
+/* --- ESTILOS MODAL DE EDIÇÃO (PERFIL) --- */
+/* ====================================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none; /* Controlado por JS */
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    /* Reutiliza o estilo .profile-card, mas remove o margin */
+    margin: 0;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* Reutiliza o padding e borda do .profile-card h3 */
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eee;
+}
+
+.modal-header h3 {
+    padding: 0;
+    border: none;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 2.5rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 0;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+/* Garante que o botão editar tenha o ícone alinhado */
+.btn-edit-address {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Dark Mode para o Modal */
+body.dark-mode .modal-header {
+    border-bottom-color: #2a3b52;
+}
+
+body.dark-mode .modal-close {
+    color: var(--color-text);
 }

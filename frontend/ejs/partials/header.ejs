@@ -1,12 +1,11 @@
 <header class="main-header">
-<div class="container header-content">
+  <div class="container header-content">
 
     <% const isAdmin = (locals.session && session.isAdmin && session.pinValidated); %>
 
     <a href="<%= isAdmin ? '/admin' : '/' %>" class="logo">RS<span>CardStore</span></a>
 
     <% if (isAdmin) { %>
-      <!--  HEADER VARIANTE DO ADMIN: sem menu de categorias e sem ícones de usuário ====== -->
       <nav class="main-nav"></nav>
 
       <div class="header-actions">
@@ -15,15 +14,15 @@
         <a href="/admin/logout" title="Sair">
           <i class="fa-solid fa-right-from-bracket"></i>
         </a>
-
-        <div class="theme-switch-wrapper">
+     
+      <div class="theme-switch-wrapper">
           <label class="theme-switch" for="theme-checkbox">
             <input type="checkbox" id="theme-checkbox" />
             <div class="slider round">
               <i class="fa-solid fa-moon"></i>
               <i class="fa-solid fa-sun"></i>
             </div>
-          </label>
+         </label>
         </div>
       </div>
     <% } else { %>
@@ -45,18 +44,21 @@
           <a href="/login" aria-label="Minha Conta"><i class="fa-solid fa-user"></i></a>
         <% } %>
 
-        <a href="/carrinho" aria-label="Carrinho de Compras">
+         <a href="/carrinho" aria-label="Carrinho de Compras">
           <i class="fa-solid fa-cart-shopping"></i>
         </a>
 
         <% if (locals.session && session.userId) { %>
+          <a href="/minha-conta" aria-label="Minha Conta" title="Minha Conta">
+            <i class="fa-solid fa-user-gear"></i>
+          </a>
           <a href="/meus-pedidos" aria-label="Meus Pedidos" title="Meus Pedidos">
             <i class="fa-solid fa-receipt"></i>
           </a>
         <% } %>
 
         <div class="theme-switch-wrapper">
-          <label class="theme-switch" for="theme-checkbox">
+           <label class="theme-switch" for="theme-checkbox">
             <input type="checkbox" id="theme-checkbox" />
             <div class="slider round">
               <i class="fa-solid fa-moon"></i>

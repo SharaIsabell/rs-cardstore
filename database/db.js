@@ -18,13 +18,14 @@ async function main() {
       nome VARCHAR(100) NOT NULL,
       email VARCHAR(100) NOT NULL UNIQUE,
       telefone VARCHAR(20),
-      endereco TEXT,
+      
       senha_hash VARCHAR(255) NOT NULL,
       tipo ENUM('cliente', 'admin') DEFAULT 'cliente',
       email_verificado BOOLEAN DEFAULT FALSE,
       token_verificacao VARCHAR(255),
       token_verificacao_expira DATETIME,
-      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_verification_sent_at DATETIME NULL -- Adicionada
     );
 
     CREATE TABLE IF NOT EXISTS produtos (
@@ -86,7 +87,8 @@ async function main() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       pedido_id INT,
       metodo ENUM('credito', 'debito', 'pix'),
-      status ENUM('aprovado', 'recusado'),
+      status ENUM('aprovado', 'recusado', 'pendente'), -- Modificado
+      mp_payment_id VARCHAR(255), -- Adicionado
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (pedido_id) REFERENCES pedidos(id) ON DELETE CASCADE
     );
@@ -105,29 +107,25 @@ async function main() {
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
     );
+
+    /* --- NOVA TABELA: ENDEREÇOS DO USUÁRIO --- */
+    CREATE TABLE IF NOT EXISTS user_enderecos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      is_principal BOOLEAN DEFAULT FALSE,
+      apelido VARCHAR(100) NOT NULL, /* Ex: 'Casa', 'Trabalho' */
+      cep VARCHAR(9) NOT NULL,
+      logradouro VARCHAR(255) NOT NULL,
+      numero VARCHAR(20) NOT NULL,
+      complemento VARCHAR(100) NULL,
+      bairro VARCHAR(100) NOT NULL,
+      cidade VARCHAR(100) NOT NULL,
+      estado VARCHAR(2) NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
   `);
 
-  const colunasEnderecoUsers = [
-    { nome: 'cep', tipo: 'VARCHAR(9) NULL' }, { nome: 'logradouro', tipo: 'VARCHAR(255) NULL' },
-    { nome: 'numero', tipo: 'VARCHAR(20) NULL' }, { nome: 'complemento', tipo: 'VARCHAR(100) NULL' },
-    { nome: 'bairro', tipo: 'VARCHAR(100) NULL' }, { nome: 'cidade', tipo: 'VARCHAR(100) NULL' },
-    { nome: 'estado', tipo: 'VARCHAR(2) NULL' }, { nome: 'last_verification_sent_at', tipo: 'DATETIME NULL' }
-  ];
-  for (const coluna of colunasEnderecoUsers) {
-    try {
-      await connection.query(`ALTER TABLE users ADD COLUMN ${coluna.nome} ${coluna.tipo};`);
-    } catch (error) {
-      if (error.code !== 'ER_DUP_FIELDNAME') console.warn(`Aviso em 'users':`, error.message);
-    }
-  }
-  try {
-    await connection.query(
-      "ALTER TABLE users ADD COLUMN last_verification_sent_at DATETIME NULL;"
-    );
-  } catch (e) {
-    if (e.code !== 'ER_DUP_FIELDNAME') console.warn('[users] last_verification_sent_at:', e.message);
-  }
-
+  // 1. Adiciona as colunas de endereço em 'pedidos' para guardar o histórico
   const colunasEnderecoPedidos = [
     { nome: 'endereco_cep', tipo: 'VARCHAR(9) NULL' }, { nome: 'endereco_rua', tipo: 'VARCHAR(255) NULL' },
     { nome: 'endereco_numero', tipo: 'VARCHAR(50) NULL' }, { nome: 'endereco_complemento', tipo: 'VARCHAR(100) NULL' },
@@ -143,6 +141,8 @@ async function main() {
       if (error.code !== 'ER_DUP_FIELDNAME') console.warn(`Aviso em 'pedidos':`, error.message);
     }
   }
+
+  // 2. Remove a coluna antiga 'endereco' de 'users'
   try {
     await connection.query("ALTER TABLE users DROP COLUMN endereco;");
     console.log("Coluna 'endereco' removida de 'users' com sucesso.");
@@ -151,6 +151,29 @@ async function main() {
       console.warn("Aviso ao tentar remover a coluna 'endereco':", error.message);
     }
   }
+
+  // 3. TENTA REMOVER as colunas de endereço estruturado de 'users' (agora estão em 'user_enderecos')
+  const colunasEnderecoUsersAntigas = ['cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado'];
+  for (const colunaNome of colunasEnderecoUsersAntigas) {
+    try {
+      await connection.query(`ALTER TABLE users DROP COLUMN ${colunaNome};`);
+      console.log(`Coluna '${colunaNome}' removida de 'users'.`);
+    } catch (error) {
+      if (error.code !== 'ER_CANT_DROP_FIELD_OR_KEY') {
+         console.warn(`Aviso ao tentar remover '${colunaNome}' de 'users':`, error.message);
+      }
+    }
+  }
+  
+  // 4. Garante que 'last_verification_sent_at' existe em 'users'
+  try {
+    await connection.query(
+      "ALTER TABLE users ADD COLUMN last_verification_sent_at DATETIME NULL;"
+    );
+  } catch (e) {
+    if (e.code !== 'ER_DUP_FIELDNAME') console.warn('[users] last_verification_sent_at:', e.message);
+  }
+
 
   // --- ALTERAÇÕES NA TABELA PAGAMENTOS ---
   try {
@@ -162,7 +185,7 @@ async function main() {
     }
   }
 
-  console.log("Banco de dados e tabelas criados com sucesso!");
+  console.log("Banco de dados e tabelas verificados/criados com sucesso!");
   await connection.end();
 }
 
