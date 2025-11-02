@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados para "<%= searchTerm %>" - RS Card Store</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../css/index.css">
+</head>
+<body>
+    <%- include('partials/header') %>
+    
+    <main>
+        <section class="section featured-products">
+            <div class="container">
+                <h2 class="section-title">Resultados para "<%= searchTerm %>"</h2>
+
+                <% if (typeof produtos !== 'undefined' && produtos.length > 0) { %>
+                    <div class="products-grid">
+                        
+                        <% produtos.forEach(produto => { %>
+                            <div class="product-card">
+                                <%# --- Badge Dinâmico: Mostra "NOVO" ou "PROMO" --- %>
+                                <% if (produto.novo) { %>
+                                <div class="product-badge">NOVO</div>
+                                <% } else if (produto.desconto_percentual > 0) { %>
+                                <div class="product-badge" style="background-color: #e74c3c;">PROMO</div>
+                                <% } %>
+    
+                                <a href="/produto/<%= produto.id %>">
+                                <div class="product-image-container">
+                                    <img src="<%= produto.imagem_url || 'https://via.placeholder.com/400x400?text=Produto' %>" alt="<%= produto.nome %>">
+                                </div>
+                                </a>
+                                <div>
+                                    <h4><%= produto.nome %></h4>
+                                
+                                    <%# --- Lógica de Preço com Desconto --- %>
+                                    <div class="product-price">
+                                        <% if (produto.desconto_percentual > 0) { %>
+                                        <% 
+                                            const precoOriginal = produto.preco;
+                                            const precoFinal = precoOriginal * (1 - produto.desconto_percentual / 100);
+                                        %>
+                                        <span style="text-decoration: line-through; color: #999; font-size: 0.9em;">
+                                            R$ <%= parseFloat(precoOriginal).toFixed(2).replace('.', ',') %>
+                                        </span>
+                                        <strong style="margin-left: 8px;">
+                                            R$ <%= parseFloat(precoFinal).toFixed(2).replace('.', ',') %>
+                                        </strong>
+                                        <% } else { %>
+                                        <strong>R$ <%= parseFloat(produto.preco).toFixed(2).replace('.', ',') %></strong>
+                                        <% } %>
+                                    </div>
+    
+                                    <%# --- Botão Adicionar ao Carrinho como Formulário --- %>
+                                    <form action="/carrinho/adicionar/<%= produto.id %>" method="POST">
+                                        <input type="hidden" name="quantidade" value="1">
+                                        <button type="submit" class="cta-button">Adicionar ao Carrinho</button>
+                                    </form>
+                                </div>
+                            </div>
+                        <% }) %>
+                        </div>
+
+                    <% if (totalPages > 1) { %>
+                        <div class="pagination">
+                            <ul>
+                                <%# Botão Anterior %>
+                                <% if (currentPage > 1) { %>
+                                    <li><a href="<%= baseUrl %>?termo=<%= searchTerm %>&page=<%= currentPage - 1 %>">&laquo;</a></li>
+                                <% } else { %>
+                                    <li><a href="#" class="disabled">&laquo;</a></li>
+                                <% } %>
+                    
+                                <%# Links das Páginas %>
+                                <% for (let i = 1; i <= totalPages; i++) { %>
+                                    <li>
+                                        <a href="<%= baseUrl %>?termo=<%= searchTerm %>&page=<%= i %>" class="<%= i === currentPage ? 'active' : '' %>">
+                                            <%= i %>
+                                        </a>
+                                    </li>
+                                <% } %>
+                    
+                                <%# Botão Próximo %>
+                                <% if (currentPage < totalPages) { %>
+                                    <li><a href="<%= baseUrl %>?termo=<%= searchTerm %>&page=<%= currentPage + 1 %>">&raquo;</a></li>
+                                <% } else { %>
+                                    <li><a href="#" class="disabled">&raquo;</a></li>
+                                <% } %>
+                            </ul>
+                        </div>
+                    <% } %>
+
+                <% } else { %>
+                    <p style="text-align: center; font-size: 1.2rem;">
+                        Nenhum produto foi encontrado para "<strong><%= searchTerm %></strong>".
+                    </p>
+                    <p style="text-align: center; margin-top: 1rem;">
+                        Tente verificar a ortografia ou usar termos mais gerais.
+                    </p>
+                <% } %>
+            </div>
+        </section>
+    </main>
+    
+    <%- include('partials/footer') %>
+    <script src="/js/theme.js"></script>
+</body>
+</html>

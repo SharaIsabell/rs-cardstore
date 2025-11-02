@@ -70,3 +70,21 @@
     <% } %>
   </div>
 </header>
+
+<% if (!isAdmin) { %>
+<div class="search-fab-container">
+    <form action="/busca" method="GET" class="search-fab-form">
+        <input 
+            type="search" 
+            name="termo" 
+            class="search-fab-input" 
+            placeholder="Buscar produtos..." 
+            aria-label="Buscar produtos"
+            required
+        >
+        <button type="submit" class="search-fab-button" aria-label="Buscar">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </form>
+</div>
+<% } %>

@@ -137,15 +137,26 @@ router.get('/', async (req, res) => {
     }
 });
 
-async function renderProductPage(req, res, viewName, category, baseUrl) {
+async function renderProductPage(req, res, viewName, category, baseUrl, searchTerm = null) {
     try {
         const page = parseInt(req.query.page, 10) || 1;
         const limit = 4; // Limite de 4 produtos por página
         const offset = (page - 1) * limit;
 
-        // Condição WHERE para a consulta
-        const whereClause = category ? `WHERE categoria = ?` : `WHERE promocao = TRUE`;
-        const queryParams = category ? [category] : [];
+        let whereClause = '';
+        const queryParams = [];
+
+        if (searchTerm) {
+            // A lógica de busca no back-end pesquisa por nome e descrição
+            whereClause = 'WHERE (nome LIKE ? OR descricao LIKE ?)';
+            queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
+        } else if (category) {
+            whereClause = 'WHERE categoria = ?';
+            queryParams.push(category);
+        } else {
+            // Fallback para /promocoes
+            whereClause = 'WHERE promocao = TRUE';
+        }
 
         // Contar o total de produtos para calcular as páginas
         const [[{ total }]] = await db.query(
@@ -170,7 +181,8 @@ async function renderProductPage(req, res, viewName, category, baseUrl) {
             produtos: produtos,
             totalPages: totalPages,
             currentPage: page,
-            baseUrl: baseUrl
+            baseUrl: baseUrl,
+            searchTerm: searchTerm // Passa o termo de busca para a view (para a paginação)
         });
 
     } catch (err) {
@@ -189,6 +201,16 @@ router.get('/yugioh', (req, res) => {
 
 router.get('/pokemon', (req, res) => {
     renderProductPage(req, res, 'pokemon', 'Pokemon', '/pokemon');
+});
+
+router.get('/busca', async (req, res) => {
+    const { termo } = req.query;
+    if (!termo) {
+        return res.redirect('/');
+    }
+    // Os resultados da busca devem ser exibidos em uma página de listagem
+    // Passamos 'null' para categoria e o 'termo' para searchTerm
+    await renderProductPage(req, res, 'busca-resultados', null, '/busca', termo);
 });
 
 router.get('/produto/:id', async (req, res) => {

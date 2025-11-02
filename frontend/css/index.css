@@ -1233,3 +1233,96 @@ body.dark-mode .modal-header {
 body.dark-mode .modal-close {
     color: var(--color-text);
 }
+
+/* ====================================================== */
+/* --- BUSCA FLUTUANTE --- */
+/* ====================================================== */
+
+.search-fab-container {
+    position: fixed;
+    top: 6rem;
+    right: 2rem;
+    z-index: 1001; /* Acima do header sticky */
+}
+
+.search-fab-form {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    /* Usa :focus-within para expandir quando o input ou o botão estão focados */
+}
+
+.search-fab-input {
+    width: 0;
+    padding: 0.8rem 0;
+    border: none;
+    border-radius: 50px;
+    background-color: var(--color-white);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1rem;
+    opacity: 0;
+    
+    /* Transição suave */
+    transition: all 0.4s ease-in-out;
+    
+    /* Remove a borda padrão do input ao focar */
+    outline: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.search-fab-button {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--color-blue-dark);
+    color: var(--color-white);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    
+    /* Garante que o botão fique na frente do input */
+    position: relative;
+    z-index: 2;
+    
+    /* Centraliza o ícone */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-fab-button:hover {
+    transform: scale(1.1);
+}
+
+/* --- A Mágica da Expansão --- */
+.search-fab-form:focus-within .search-fab-input {
+    width: 250px;
+    opacity: 1;
+    
+    /* Ajusta o padding e a posição para o texto aparecer */
+    padding: 0.8rem 1.5rem;
+    padding-right: 4.5rem; /* Deixa espaço para o botão não sobrepor o texto */
+    
+    /* Move o input para a esquerda do botão */
+    transform: translateX(-65px);
+}
+
+.search-fab-form:focus-within .search-fab-button {
+    /* Mantém o botão na posição enquanto o input expande "por trás" dele */
+    background-color: var(--color-blue-dark);
+}
+
+/* Ajustes Dark Mode para a Busca */
+body.dark-mode .search-fab-input {
+    background-color: var(--color-gray-light);
+    color: var(--color-text);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
+
+body.dark-mode .search-fab-button {
+    color: #0D1B2A; /* Texto escuro no botão laranja */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+}
