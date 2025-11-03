@@ -1079,6 +1079,79 @@ router.get('/meus-pedidos', async (req, res) => {
     }
 });
 
+// Rota para CANCELAR um pedido
+router.post('/pedido/cancelar/:id', isAuthenticated, async (req, res) => {
+    const pedido_id = req.params.id;
+    const user_id = req.session.userId;
+    const connection = await db.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // Buscar o pedido e o ID do pagamento (FOR UPDATE trava a linha)
+        const [[pedidoInfo]] = await connection.query(
+            `SELECT 
+                p.status, 
+                pag.mp_payment_id 
+             FROM pedidos p
+             LEFT JOIN pagamentos pag ON p.id = pag.pedido_id
+             WHERE p.id = ? AND p.user_id = ?
+             FOR UPDATE`,
+            [pedido_id, user_id]
+        );
+
+        // Validar
+        if (!pedidoInfo) {
+            throw new Error('Pedido não encontrado ou não pertence ao usuário.');
+        }
+
+        // Só pode cancelar se estiver 'pago'
+        if (pedidoInfo.status !== 'pago') {
+            req.session.messages = { error: 'Este pedido não pode ser cancelado (status: ' + pedidoInfo.status + ').' };
+            await connection.rollback(); // Libera o lock
+            return res.redirect('/meus-pedidos');
+        }
+
+        // Iniciar Estorno
+        console.log(`[CANCELAR-BYPASS] Estorno simulado para Pedido ${pedido_id}. Nenhum contato com o gateway de pagamento.`);
+
+        // Retornar Itens ao Estoque
+        const [itens] = await connection.query(
+            'SELECT produto_id, quantidade FROM pedido_itens WHERE pedido_id = ?',
+            [pedido_id]
+        );
+
+        for (const item of itens) {
+            await connection.query(
+                'UPDATE produtos SET estoque = estoque + ? WHERE id = ?',
+                [item.quantidade, item.produto_id]
+            );
+        }
+        console.log(`[CANCELAR] Estoque do pedido ${pedido_id} retornado.`);
+
+
+        // Atualizar Status do Pedido 
+        await connection.query(
+            "UPDATE pedidos SET status = 'cancelado' WHERE id = ?",
+            [pedido_id]
+        );
+
+        // Commit
+        await connection.commit();
+        
+        req.session.messages = { success: 'Pedido cancelado com sucesso!' };
+        res.redirect('/meus-pedidos');
+
+    } catch (error) {
+        await connection.rollback();
+        console.error(`[ERRO CANCELAR] Falha ao cancelar pedido ${pedido_id}:`, error.message);
+        req.session.messages = { error: `Não foi possível cancelar o pedido: ${error.message}` };
+        res.redirect('/meus-pedidos');
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
 // --- ROTA FICTÍCIA: Download NF (Versão Modernizada) ---
 router.get('/pedidos/nf/:uuid/:id.pdf', (req, res) => {
     // Pegamos os dados dos parâmetros da rota

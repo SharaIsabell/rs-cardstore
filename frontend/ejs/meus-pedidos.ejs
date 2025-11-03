@@ -285,7 +285,27 @@
         .order-tracking-details.open .tracking-timeline .timeline-item:nth-child(5) { transition-delay: 0.6s; }
         .order-tracking-details.open .tracking-code-box { transition-delay: 0.7s; }
 
-        /* --- FIM DOS NOVOS ESTILOS --- */
+        .order-actions form {
+            margin: 0;
+        }
+
+        .cta-button.btn-danger {
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+            color: var(--color-white);
+        }
+        .cta-button.btn-danger:hover {
+            background-color: #c0392b;
+            border-color: #c0392b;
+        }
+        body.dark-mode .cta-button.btn-danger {
+                background-color: #c0392b;
+                border-color: #c0392b;
+        }
+        body.dark-mode .cta-button.btn-danger:hover {
+            background-color: #e74c3c;
+            border-color: #e74c3c;
+        }
 
         body.dark-mode .order-card { border-color: #2a3b52; }
         body.dark-mode .order-header { background: var(--color-white); border-color: #2a3b52; }
@@ -338,11 +358,11 @@
                                 <strong>#<%= pedido.id %></strong>
                             </div>
 
-                            <% if (pedido.data_entrega_estimada) { %>
-                            <div class="order-delivery-date">
-                                <span>Chega em</span>
-                                <strong><%= pedido.data_entrega_estimada %></strong>
-                            </div>
+                            <% if (pedido.data_entrega_estimada && pedido.status !== 'cancelado') { %>
+                                <div class="order-delivery-date">
+                                    <span>Chega em</span>
+                                    <strong><%= pedido.data_entrega_estimada %></strong>
+                                </div>
                             <% } %>
 
                             <div>
@@ -380,6 +400,13 @@
                                     </a>
                                 <% } else { %>
                                     <button class="cta-button disabled" disabled>NF Indisponível</button>
+                                <% } %>
+                                 <% if (pedido.status === 'pago') { %>
+                                    <form action="/pedido/cancelar/<%= pedido.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja cancelar este pedido? O estorno será processado automaticamente.');">
+                                        <button type="submit" class="cta-button btn-danger" title="Cancelar Pedido">
+                                            <i class="fa-solid fa-times"></i> Cancelar
+                                        </button>
+                                    </form>
                                 <% } %>
                             </div>
                         </div>
