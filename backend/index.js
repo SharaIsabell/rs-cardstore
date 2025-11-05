@@ -4,7 +4,7 @@ const db = require('../database/pooldb');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const crypto = require('crypto');
-const { enviarEmailVerificacao, enviarEmailAlertaEstoque, enviarEmailConfirmacaoPedido } = require('../frontend/js/enviarEmail');
+const { enviarEmailVerificacao, enviarEmailAlertaEstoque, enviarEmailConfirmacaoPedido, enviarEmailRedefinicaoSenha } = require('../frontend/js/enviarEmail');
 const session = require('express-session');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment } = require('mercadopago');
@@ -33,7 +33,7 @@ router.use((req, res, next) => {
     res.locals.mercadoPagoPublicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
     res.locals.getMessages = () => {
         const messages = req.session.messages || {};
-        req.session.messages = {}; 
+        req.session.messages = {};
         return messages;
     };
     next();
@@ -246,8 +246,16 @@ router.get('/login', (req, res) => {
     if (req.query.status === 'verificado') {
         message = 'E-mail verificado com sucesso! Você já pode fazer o login.';
     }
-    // Passamos tanto a mensagem de sucesso quanto a de erro (inicialmente nula)
-    res.render('login', { message: message, errorMessage: null });
+    if (req.query.status === 'reset_success') {
+        message = 'Senha redefinida com sucesso! Você já pode fazer o login.';
+    }
+    
+    let errorMessage = null;
+    if (req.query.status === 'reset_expired') {
+        errorMessage = 'O link de redefinição de senha é inválido ou expirou. Tente novamente.';
+    }
+
+    res.render('login', { message: message, errorMessage: errorMessage });
 });
 
 // ROTA DE REGISTRO MODIFICADA
@@ -442,6 +450,120 @@ router.get('/logout', (req, res) => {
     });
 });
 
+// Exibe a página para o usuário inserir o e-mail
+router.get('/esqueci-senha', (req, res) => {
+    res.render('esqueci-senha', { message: null, errorMessage: null });
+});
+
+// Processa o e-mail, gera o token e envia o e-mail
+router.post('/esqueci-senha', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const [users] = await db.query('SELECT id, email FROM users WHERE email = ?', [email]);
+        
+        if (users.length > 0) {
+            const user = users[0];
+            const token = crypto.randomBytes(32).toString('hex');
+            // Token com expiração (5 minutos)
+            const expira = new Date(Date.now() + 300000); // 5 minutos
+
+            await db.query(
+                'UPDATE users SET token_redefinicao_senha = ?, token_redefinicao_expira = ? WHERE id = ?',
+                [token, expira, user.id]
+            );
+            
+            // Dispara o e-mail
+            await enviarEmailRedefinicaoSenha(user.email, token);
+        }
+        
+        // Responde com sucesso mesmo se o e-mail não existir (para evitar enumeração de usuários)
+        res.render('esqueci-senha', {
+            message: 'Se um e-mail cadastrado for encontrado, um link de redefinição será enviado.',
+            errorMessage: null
+        });
+
+    } catch (error) {
+        console.error('ERRO AO SOLICITAR REDEFINIÇÃO:', error);
+        res.render('esqueci-senha', {
+            message: null,
+            errorMessage: 'Ocorreu um erro no servidor. Tente novamente.'
+        });
+    }
+});
+
+// Exibe a página para o usuário criar a nova senha
+router.get('/redefinir-senha', async (req, res) => {
+    const { token } = req.query;
+    if (!token) {
+        return res.redirect('/login?status=reset_expired');
+    }
+    
+    try {
+        // Busca o usuário pelo token E verifica se não expirou
+        const [users] = await db.query(
+            'SELECT id FROM users WHERE token_redefinicao_senha = ? AND token_redefinicao_expira > NOW()',
+            [token]
+        );
+
+        if (users.length === 0) {
+            // Token inválido ou expirado
+            return res.redirect('/login?status=reset_expired');
+        }
+
+        // Token válido, renderiza a página de redefinição
+        res.render('redefinir-senha', { token: token, errorMessage: null });
+        
+    } catch (error) {
+        console.error('ERRO AO VALIDAR TOKEN DE REDEFINIÇÃO:', error);
+        res.redirect('/login?status=reset_expired');
+    }
+});
+
+// Processa a nova senha, atualiza o banco e invalida o token
+router.post('/redefinir-senha', async (req, res) => {
+    const { token, nova_senha, confirmar_nova_senha } = req.body;
+
+    // Validação de senhas
+    if (nova_senha !== confirmar_nova_senha) {
+        return res.render('redefinir-senha', { token, errorMessage: 'As senhas não coincidem.' });
+    }
+    // Validação de complexidade (igual ao registro)
+    if (nova_senha.length < 8 || !/\d/.test(nova_senha) || !/[a-zA-Z]/.test(nova_senha)) {
+        return res.render('redefinir-senha', { token, errorMessage: 'A senha deve ter no mínimo 8 caracteres, com letras e números.' });
+    }
+
+    try {
+        // Busca o usuário pelo token E verifica se não expirou (Dupla verificação)
+        const [users] = await db.query(
+            'SELECT id FROM users WHERE token_redefinicao_senha = ? AND token_redefinicao_expira > NOW()',
+            [token]
+        );
+
+        if (users.length === 0) {
+            return res.redirect('/login?status=reset_expired');
+        }
+        
+        const user = users[0];
+
+        // Armazena com hash
+        const salt = await bcrypt.genSalt(10);
+        const senha_hash = await bcrypt.hash(nova_senha, salt);
+        
+        // Atualiza a senha e invalida o token (usa o ID do usuário para garantir)
+        await db.query(
+            'UPDATE users SET senha_hash = ?, token_redefinicao_senha = NULL, token_redefinicao_expira = NULL WHERE id = ?',
+            [senha_hash, user.id]
+        );
+        
+        // Redireciona para o login com mensagem de sucesso
+        res.redirect('/login?status=reset_success');
+
+    } catch (error) {
+        console.error('ERRO AO SALVAR NOVA SENHA:', error);
+        res.render('redefinir-senha', { token, errorMessage: 'Erro no servidor ao salvar sua senha.' });
+    }
+});
+
 router.get('/api/get-address', isAuthenticated, async (req, res) => {
     // Agora busca o endereço principal da nova tabela
     try {
@@ -463,7 +585,8 @@ router.get('/api/get-address', isAuthenticated, async (req, res) => {
             };
             res.json({ success: true, address: JSON.stringify(address) });
         } else {
-            res.json({ success: false, message: 'Nenhum endereço principal cadastrado.' });        }
+            res.json({ success: false, message: 'Nenhum endereço principal cadastrado.' });
+        }
     } catch (error) {
         console.error('Erro ao buscar endereço principal:', error);
         res.status(500).json({ success: false, message: 'Erro no servidor.' });
@@ -1552,6 +1675,7 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
         res.render('meu-perfil', {
             user: userRows[0],
             enderecos: enderecos,
+            // Passa as mensagens 'flash' para a view
             messages: res.locals.getMessages() 
         });
 
@@ -1577,6 +1701,7 @@ router.post('/minha-conta/perfil', isAuthenticated, async (req, res) => {
             [nome, telefoneNumerico, req.session.userId]
         );
         req.session.messages = { success: 'Dados atualizados com sucesso!' };
+        // Atualiza o nome na sessão
         req.session.userName = nome;
         res.redirect('/minha-conta');
     } catch (error) {
@@ -1753,6 +1878,7 @@ router.get('/api/minha-conta/endereco/:id', isAuthenticated, async (req, res) =>
 router.post('/minha-conta/endereco/editar/:id', isAuthenticated, async (req, res) => {
     const { id } = req.params;
     const user_id = req.session.userId;
+    // Extrai os dados do formulário
     const { apelido, cep, logradouro, numero, complemento, bairro, cidade, estado } = req.body;
 
     try {
@@ -1770,6 +1896,5 @@ router.post('/minha-conta/endereco/editar/:id', isAuthenticated, async (req, res
     }
     res.redirect('/minha-conta');
 });
-
 
 module.exports = router;

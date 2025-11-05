@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recuperar Senha - RS Card Store</title>
+    <link rel="stylesheet" href="../css/login.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-orange-vibrant: #FF9F1C;
+        }
+
+        .login-form {
+            padding: 2rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: center;  
+            height: 100%;         
+            text-align: center;  
+        }
+
+        .icon-wrapper {
+            font-size: 3.5rem; 
+            margin-bottom: 1.5rem;
+            color: var(--color-orange-vibrant);
+        }
+
+        .login-form h2 {
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-form p {
+            font-size: 1rem;
+            max-width: 350px;
+            margin-bottom: 2rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .auth-footer {
+            margin-top: 2rem;
+        }
+
+        .auth-footer .ghost-link {
+            background-color: transparent;
+            border: 2px solid var(--color-orange-vibrant);
+            color: var(--color-orange-vibrant);
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        .auth-footer .ghost-link:hover {
+            background-color: rgba(255, 159, 28, 0.1);
+            transform: translateY(-3px);
+            text-decoration: none;
+        }
+
+        @media (max-width: 480px) {
+            .login-form {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+
+    <div class="auth-container" style="display: flex; width: 100%; max-width: 540px; min-height: 520px; backdrop-filter: blur(10px);">
+        
+        <div class="forms-container" style="position: relative; width: 100%; height: 100%;">
+            <div class="login-form" style="opacity: 1; z-index: 2; transform: none;">
+                
+                <div class="icon-wrapper">
+                    <span>🔑</span>
+                </div>
+
+                <h2>Esqueceu sua senha?</h2>
+                <p>Não se preocupe. Digite seu e-mail e enviaremos um link para você criar uma nova.</p>
+                
+                <% if (typeof message !== 'undefined' && message) { %>
+                    <div class="success-message"><%= message %></div>
+                <% } %>
+                <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+                    <div class="error-message"><%= errorMessage %></div>
+                <% } %>
+                
+                <form action="/esqueci-senha" method="POST">
+                    <div class="input-group">
+                        <input type="email" id="loginEmail" name="email" required placeholder=" ">
+                        <label for="loginEmail">Seu E-mail de Cadastro</label>
+                    </div>
+                    <button type="submit" class="cta-button">Enviar Link</button>
+                </form>
+
+                <div class="auth-footer">
+                    <a href="/login" class="ghost-link">Voltar para o Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="../js/particles.min.js"></script>
+    <script src="../js/login.js"></script>
+</body>
+</html>

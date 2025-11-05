@@ -25,7 +25,6 @@ const enviarEmailVerificacao = async (email, token) => {
 };
 
 /**
- * Envia e-mail de alerta de estoque 
  * @param {{id:number, nome:string, estoque:number, imagem_url?:string}} produto
  * @param {'LOW'|'OUT'} tipo - LOW = baixo, OUT = esgotou
  * @param {number} [limiteBaixo=5]
@@ -98,7 +97,6 @@ const enviarEmailConfirmacaoPedido = async (pedido, itens, linkNF) => {
     const freteFormatado = Number(pedido.frete).toFixed(2).replace('.', ',');
     const totalFormatado = Number(pedido.total).toFixed(2).replace('.', ',');
 
-    // Monta o corpo do e-mail
     const corpoHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
         <header style="background-color: #0A2463; padding: 20px; text-align: center;">
@@ -182,7 +180,7 @@ const enviarEmailConfirmacaoPedido = async (pedido, itens, linkNF) => {
              pass: GMAIL_APP_PASS
          }
      });
- 
+
      const statusLegivelMap = {
          'pago': 'Pagamento Confirmado',
          'enviado': 'Enviado',
@@ -214,7 +212,6 @@ const enviarEmailConfirmacaoPedido = async (pedido, itens, linkNF) => {
              statusMessage = `O status foi atualizado para ${statusLegivel}.`;
      }
  
-     // corpo do e-mail
      const corpoHtml = `
      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
          <header style="background-color: #0A2463; padding: 20px; text-align: center;">
@@ -262,9 +259,157 @@ const enviarEmailConfirmacaoPedido = async (pedido, itens, linkNF) => {
      }
  };
 
+ /**
+ * Envia e-mail de redefinição de senha.
+ * @param {string} email - Email do destinatário
+ * @param {string} token - Token de redefinição
+ */
+const enviarEmailRedefinicaoSenha = async (email, token) => {
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: GMAIL_USER,
+            pass: GMAIL_APP_PASS
+        }
+    });
+
+    // Link seguro com token
+    const urlRedefinicao = `http://localhost:3000/redefinir-senha?token=${token}`;
+
+    // Template HTML moderno
+    const htmlBody = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-M">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Lato:wght@400;700&display=swap');
+            body {
+                font-family: 'Lato', Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f9;
+            }
+            .container {
+                width: 90%;
+                max-width: 600px;
+                margin: 20px auto;
+                background-color: #ffffff;
+                border: 1px solid #e0e0e0;
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+                overflow: hidden;
+            }
+            .header {
+                background-color: #0A2463;
+                padding: 30px 40px;
+                text-align: center;
+            }
+            .logo {
+                font-family: 'Montserrat', Arial, sans-serif;
+                font-size: 28px;
+                font-weight: 800;
+                color: #e0e0e0;
+                text-decoration: none;
+            }
+            .logo-span {
+                color: #FF9F1C;
+            }
+            .content {
+                padding: 40px;
+                color: #333;
+                line-height: 1.6;
+            }
+            .content h2 {
+                font-family: 'Montserrat', Arial, sans-serif;
+                color: #0A2463;
+                margin: 0 0 20px;
+                font-size: 24px;
+            }
+            .content p {
+                margin-bottom: 20px;
+            }
+            .icon {
+                font-size: 40px;
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+                color: #0A2463;
+            }
+            .button-wrapper {
+                text-align: center;
+                margin: 30px 0;
+            }
+            .button {
+                background-color: #FF9F1C;
+                color: #0A2463;
+                padding: 14px 30px;
+                text-decoration: none;
+                border-radius: 50px;
+                font-weight: bold;
+                font-family: 'Lato', sans-serif;
+                font-size: 16px;
+                border: none;
+                display: inline-block;
+            }
+            .footer {
+                background-color: #f9f9f9;
+                text-align: center;
+                padding: 20px 40px;
+                font-size: 12px;
+                color: #777;
+                border-top: 1px solid #eee;
+            }
+        </style>
+    </head>
+    <body>
+        <div class.="container" style="width: 90%; max-width: 600px; margin: 20px auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden;">
+            <div class="header" style="background-color: #0A2463; padding: 30px 40px; text-align: center;">
+                <a href="http://localhost:3000" class="logo" style="font-family: 'Montserrat', Arial, sans-serif; font-size: 28px; font-weight: 800; color: #e0e0e0; text-decoration: none;">
+                    RS<span class="logo-span" style="color: #FF9F1C;">CardStore</span>
+                </a>
+            </div>
+            <div class="content" style="padding: 40px; color: #333; line-height: 1.6;">
+                <span class="icon" style="font-size: 40px; display: block; text-align: center; margin-bottom: 20px; color: #0A2463;">🔑</span>
+                <h2 style="font-family: 'Montserrat', Arial, sans-serif; color: #0A2463; margin: 0 0 20px; font-size: 24px;">Redefinição de Senha</h2>
+                <p style="margin-bottom: 20px;">Olá,</p>
+                <p style="margin-bottom: 20px;">Recebemos uma solicitação para redefinir a senha da sua conta. Se foi você, clique no botão abaixo para criar uma nova senha:</p>
+                <div class="button-wrapper" style="text-align: center; margin: 30px 0;">
+                    <a href="${urlRedefinicao}" target="_blank" class="button" style="background-color: #FF9F1C; color: #0A2463; padding: 14px 30px; text-decoration: none; border-radius: 50px; font-weight: bold; font-family: 'Lato', sans-serif; font-size: 16px; border: none; display: inline-block;">
+                        Criar Nova Senha
+                    </a>
+                </div>
+                <p style="margin-bottom: 20px;">Se você não solicitou isso, pode ignorar este e-mail com segurança.</p>
+                <p style="font-size: 0.9em; color: #777; margin-bottom: 20px;">Este link é válido por 5 minutos.</p>
+            </div>
+            <div class="footer" style="background-color: #f9f9f9; text-align: center; padding: 20px 40px; font-size: 12px; color: #777; border-top: 1px solid #eee;">
+                © 2025 RS Card Store. Todos os direitos reservados.
+            </div>
+        </div>
+    </body>
+    </html>
+    `;
+
+    const mailOptions = {
+        from: `"RS Card Store" <${GMAIL_USER}>`,
+        to: email,
+        subject: 'Redefinição de Senha - RS Card Store',
+        html: htmlBody
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[E-MAIL] Redefinição de senha enviada para ${email}`);
+    } catch (error) {
+        console.error(`[E-MAIL] Erro ao enviar redefinição para ${email}:`, error);
+    }
+};
+
 module.exports = { 
     enviarEmailVerificacao, 
     enviarEmailAlertaEstoque,
     enviarEmailConfirmacaoPedido,
-    enviarEmailStatusPedido
+    enviarEmailStatusPedido,
+    enviarEmailRedefinicaoSenha
 };

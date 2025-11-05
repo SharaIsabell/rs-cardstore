@@ -24,8 +24,10 @@ async function main() {
       email_verificado BOOLEAN DEFAULT FALSE,
       token_verificacao VARCHAR(255),
       token_verificacao_expira DATETIME,
+      token_redefinicao_senha VARCHAR(255),
+      token_redefinicao_expira DATETIME,
       criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      last_verification_sent_at DATETIME NULL -- Adicionada
+      last_verification_sent_at DATETIME NULL
     );
 
     CREATE TABLE IF NOT EXISTS produtos (
