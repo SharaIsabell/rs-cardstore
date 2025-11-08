@@ -1,5 +1,8 @@
 const { calcCartTotal } = require('../frontend/js/calcCartTotal');
 
+// O que tá testando? Resposta: As funcionalidades do carrinho de compras , 
+// e queremos como resultado final: Cálculos funcionando corretamente em todos os cenários de teste
+
 describe('calcCartTotal', () => {
   test('retorna 0 com lista vazia', () => {
     expect(calcCartTotal([])).toBe(0);
