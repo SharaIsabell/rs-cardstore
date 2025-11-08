@@ -3,7 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../database/pooldb');
 const { enviarEmailStatusPedido } = require('../frontend/js/enviarEmail');
-const { produtosAdminRouter } = require('./produtos-admin'); 
+const { produtosAdminRouter } = require('./produtos-admin');
+const { Parser } = require('json2csv');
+const puppeteer = require('puppeteer');
 
 function requireAdminLogin(req, res, next) {
   if (!(req.session && req.session.isAdmin)) {
@@ -21,6 +23,271 @@ function requireAdminPin(req, res, next) {
   }
   next();
 }
+
+// ======================================================
+// ROTAS: RELATÓRIOS (US Implementada) ---
+// ======================================================
+
+/**
+ * Helper para gerar os filtros de data para as queries de relatório
+ * @param {string} periodoQuery - O valor de req.query.periodo (ex: 'hoje', 'semana', 'mes')
+ * @returns {object} { sql: string, params: Array }
+ */
+function getReportDateFilter(periodoQuery) {
+    let whereClause = "WHERE p.status IN ('pago', 'enviado', 'entregue') ";
+    const params = [];
+
+    const hoje = new Date().toISOString().split('T')[0];
+
+    switch (periodoQuery) {
+        case 'hoje':
+            whereClause += "AND DATE(p.criado_em) = ? ";
+            params.push(hoje);
+            break;
+        case 'semana':
+            // Pega os últimos 7 dias
+            whereClause += "AND p.criado_em >= CURDATE() - INTERVAL 7 DAY ";
+            break;
+        case 'mes':
+            // Pega os últimos 30 dias
+            whereClause += "AND p.criado_em >= CURDATE() - INTERVAL 30 DAY ";
+            break;
+        case 'mes_atual':
+            // Pega o mês corrente (ex: 1 a 30 de Novembro)
+            whereClause += "AND YEAR(p.criado_em) = YEAR(CURDATE()) AND MONTH(p.criado_em) = MONTH(CURDATE()) ";
+            break;
+        default:
+            // Padrão: Mês atual
+            whereClause += "AND YEAR(p.criado_em) = YEAR(CURDATE()) AND MONTH(p.criado_em) = MONTH(CURDATE()) ";
+            break;
+    }
+    return { whereClause, params };
+}
+
+// Rota principal para EXIBIR os relatórios (AC1, AC2, AC3)
+router.get('/relatorios', requireAdminPin, async (req, res) => {
+    try {
+        const periodo = req.query.periodo || 'mes_atual'; // Padrão
+        const { whereClause, params } = getReportDateFilter(periodo);
+
+        // 1. Receita Total (AC2)
+        const [[receitaData]] = await db.query(
+            `SELECT 
+                SUM(p.total) as receitaTotal, 
+                COUNT(p.id) as numPedidos
+             FROM pedidos p
+             ${whereClause}`,
+            params
+        );
+
+        // 2. Produtos mais vendidos (Quantidade) (AC3)
+        const [maisVendidosQtd] = await db.query(
+            `SELECT 
+                prod.nome,
+                SUM(pi.quantidade) as totalQuantidade
+             FROM pedido_itens pi
+             JOIN pedidos p ON pi.pedido_id = p.id
+             JOIN produtos prod ON pi.produto_id = prod.id
+             ${whereClause}
+             GROUP BY prod.id, prod.nome
+             ORDER BY totalQuantidade DESC
+             LIMIT 10`,
+            params
+        );
+
+        // 3. Produtos mais vendidos (Valor) (AC3)
+        const [maisVendidosValor] = await db.query(
+            `SELECT 
+                prod.nome,
+                SUM(pi.quantidade * pi.preco_unitario) as totalValor
+             FROM pedido_itens pi
+             JOIN pedidos p ON pi.pedido_id = p.id
+             JOIN produtos prod ON pi.produto_id = prod.id
+             ${whereClause}
+             GROUP BY prod.id, prod.nome
+             ORDER BY totalValor DESC
+             LIMIT 10`,
+            params
+        );
+        
+        res.render('admin/relatorios', {
+            adminEmail: req.session.adminEmail,
+            receitaData,
+            maisVendidosQtd,
+            maisVendidosValor,
+            periodoSelecionado: periodo
+        });
+
+    } catch (error) {
+        console.error("Erro ao gerar relatórios:", error);
+        res.redirect('/admin?error=relatorios');
+    }
+});
+
+// Rota para EXPORTAR o relatório (PDF)
+router.get('/relatorios/exportar/pdf', requireAdminPin, async (req, res) => {
+    try {
+        const periodo = req.query.periodo || 'mes_atual';
+        const { whereClause, params } = getReportDateFilter(periodo);
+
+        // 1. Busca os dados
+        const [[receitaData]] = await db.query(
+            `SELECT SUM(p.total) as receitaTotal, COUNT(p.id) as numPedidos FROM pedidos p ${whereClause}`,
+            params
+        );
+        const [maisVendidosQtd] = await db.query(
+            `SELECT prod.nome, SUM(pi.quantidade) as totalQuantidade FROM pedido_itens pi JOIN pedidos p ON pi.pedido_id = p.id JOIN produtos prod ON pi.produto_id = prod.id ${whereClause} GROUP BY prod.id, prod.nome ORDER BY totalQuantidade DESC LIMIT 10`,
+            params
+        );
+        const [maisVendidosValor] = await db.query(
+            `SELECT prod.nome, SUM(pi.quantidade * pi.preco_unitario) as totalValor FROM pedido_itens pi JOIN pedidos p ON pi.pedido_id = p.id JOIN produtos prod ON pi.produto_id = prod.id ${whereClause} GROUP BY prod.id, prod.nome ORDER BY totalValor DESC LIMIT 10`,
+            params
+        );
+
+        // 2. Renderiza o template EJS específico para PDF
+        const data = {
+            receitaData,
+            maisVendidosQtd,
+            maisVendidosValor,
+            periodoSelecionado: periodo
+        };
+
+        res.render('admin/relatorio-pdf', data, async (err, html) => {
+            if (err) {
+                console.error("Erro ao renderizar template PDF:", err);
+                return res.redirect('/admin/relatorios?error=pdf-render');
+            }
+
+            let browser;
+            try {
+                // 3. Inicia o Puppeteer
+                browser = await puppeteer.launch({
+                    headless: 'new', 
+                    args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+                });
+                
+                const page = await browser.newPage();
+                
+                // 4. Define o conteúdo da página
+                await page.setContent(html, { waitUntil: 'networkidle0' });
+                
+                // 5. Gera o PDF
+                const pdfBuffer = await page.pdf({
+                    format: 'A4',
+                    printBackground: true, 
+                    margin: {
+                        top: '20px',
+                        right: '20px',
+                        bottom: '20px',
+                        left: '20px'
+                    }
+                });
+                
+                await browser.close();
+
+                // 6. Envia o PDF como resposta
+                const fileName = `relatorio-vendas-${periodo}-${new Date().toISOString().split('T')[0]}.pdf`;
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+                res.send(pdfBuffer);
+
+            } catch (pdfError) {
+                console.error("Erro ao gerar PDF com Puppeteer:", pdfError);
+                if (browser) await browser.close();
+                res.redirect('/admin/relatorios?error=pdf-generate');
+            }
+        });
+
+    } catch (error) {
+        console.error("Erro ao buscar dados para PDF:", error);
+        res.redirect('/admin/relatorios?error=pdf-data');
+    }
+});
+
+// Rota para EXPORTAR o relatório (AC4)
+router.get('/relatorios/exportar/csv', requireAdminPin, async (req, res) => {
+    try {
+        const periodo = req.query.periodo || 'mes_atual';
+        const { whereClause, params } = getReportDateFilter(periodo);
+
+        // 1. Busca os dados
+        const [[receitaData]] = await db.query(`SELECT SUM(p.total) as receitaTotal, COUNT(p.id) as numPedidos FROM pedidos p ${whereClause}`, params);
+        const [maisVendidosQtd] = await db.query(`SELECT prod.nome, SUM(pi.quantidade) as totalQuantidade FROM pedido_itens pi JOIN pedidos p ON pi.pedido_id = p.id JOIN produtos prod ON pi.produto_id = prod.id ${whereClause} GROUP BY prod.id, prod.nome ORDER BY totalQuantidade DESC LIMIT 10`, params);
+        const [maisVendidosValor] = await db.query(`SELECT prod.nome, SUM(pi.quantidade * pi.preco_unitario) as totalValor FROM pedido_itens pi JOIN pedidos p ON pi.pedido_id = p.id JOIN produtos prod ON pi.produto_id = prod.id ${whereClause} GROUP BY prod.id, prod.nome ORDER BY totalValor DESC LIMIT 10`, params);
+
+        // 2. Formata os dados para o CSV
+        const dataParaCsv = [];
+
+        // Prepara os arrays de dados formatados
+        const resumoArray = [
+            { chave: 'Receita Total', valor: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receitaData.receitaTotal || 0) },
+            { chave: 'Total de Pedidos', valor: receitaData.numPedidos || 0 }
+        ];
+
+        const maisVendidosValorFormatado = maisVendidosValor.map(item => ({
+            nome: item.nome,
+            totalValor: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalValor || 0)
+        }));
+
+        // Define os nomes das colunas
+        const headers = {
+            resumoChave: 'Resumo (Chave)',
+            resumoValor: 'Resumo (Valor)',
+            spacer1: ' ', // Coluna vazia
+            topQtdNome: 'Top 10 (Quantidade)',
+            topQtdValor: 'Qtd.',
+            spacer2: '  ', // Coluna vazia (com 2 espaços para ser única)
+            topValorNome: 'Top 10 (Valor)',
+            topValorValor: 'Receita (R$)'
+        };
+
+        const numRows = Math.max(resumoArray.length, maisVendidosQtd.length, maisVendidosValorFormatado.length, 10);
+
+        // 3. Mescla os dados em um único array 
+        for (let i = 0; i < numRows; i++) {
+            const row = {};
+
+            row[headers.resumoChave] = resumoArray[i] ? resumoArray[i].chave : '';
+            row[headers.resumoValor] = resumoArray[i] ? resumoArray[i].valor : '';
+
+            row[headers.spacer1] = '';
+
+            row[headers.topQtdNome] = maisVendidosQtd[i] ? maisVendidosQtd[i].nome : '';
+            row[headers.topQtdValor] = maisVendidosQtd[i] ? maisVendidosQtd[i].totalQuantidade : '';
+
+            row[headers.spacer2] = '';
+            
+            row[headers.topValorNome] = maisVendidosValorFormatado[i] ? maisVendidosValorFormatado[i].nome : '';
+            row[headers.topValorValor] = maisVendidosValorFormatado[i] ? maisVendidosValorFormatado[i].totalValor : '';
+
+            dataParaCsv.push(row);
+        }
+
+        // 4. Define os campos para o Parser na ordem correta
+        const fields = [
+            headers.resumoChave,
+            headers.resumoValor,
+            headers.spacer1,
+            headers.topQtdNome,
+            headers.topQtdValor,
+            headers.spacer2,
+            headers.topValorNome,
+            headers.topValorValor
+        ];
+
+        const parser = new Parser({ fields });
+        const csv = parser.parse(dataParaCsv);
+
+        res.header('Content-Type', 'text/csv; charset=utf-8');
+        res.attachment(`relatorio-vendas-${periodo}-${new Date().toISOString().split('T')[0]}.csv`);
+        // Adiciona um BOM para o Excel entender UTF-8 corretamente
+        res.send('\ufeff' + csv);
+
+    } catch (error) {
+        console.error("Erro ao exportar CSV:", error);
+        res.redirect('/admin/relatorios?error=export');
+    }
+});
 
 /* Utilitário de PIN */
 const PIN_LEN = parseInt(process.env.ADMIN_PIN_LENGTH || '6', 10);
@@ -207,63 +474,63 @@ router.get('/pedidos/:id', requireAdminPin, async (req, res) => {
 
 // Rota para ATUALIZAR o pedido
 router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
-  const pedidoId = req.params.id;
-  const { status: novoStatus, codigo_rastreamento } = req.body;
-  const connection = await db.getConnection(); // Usar conexão para garantir consistência
-
-  try {
-      await connection.beginTransaction();
-
-      // Busca o status ATUAL e os dados do cliente ANTES de atualizar
-      const [[pedidoAtual]] = await connection.query(
-          `SELECT p.status, u.email, u.nome
-          FROM pedidos p
-          JOIN users u ON p.user_id = u.id
-          WHERE p.id = ? FOR UPDATE`, // Lock para evitar condição de corrida
-          [pedidoId]
-      );
-
-      if (!pedidoAtual) {
-          await connection.rollback();
-          return res.redirect('/admin/pedidos?message=Erro: Pedido não encontrado.');
-      }
-
-      // Se o status não for 'enviado', limpa o código de rastreio
-      const codigoFinal = (novoStatus === 'enviado') ? codigo_rastreamento : null;
-
-      // Atualiza o pedido no banco
-      await connection.query(
-          `UPDATE pedidos
-          SET status = ?, codigo_rastreamento = ?
-          WHERE id = ?`,
-          [novoStatus, codigoFinal, pedidoId]
-      );
-
-      await connection.commit(); // Confirma a atualização no banco
-
-      // Envia o e-mail APÓS confirmar a atualização, SE o status mudou
-      if (pedidoAtual.status !== novoStatus) {
-          // Chama a função de envio de e-mail
-          await enviarEmailStatusPedido(
-              { id: pedidoId }, // Objeto pedido (só precisamos do id aqui)
-              { email: pedidoAtual.email, nome: pedidoAtual.nome }, // Objeto cliente
-              novoStatus, // O novo status que foi definido
-              codigoFinal // O código de rastreio (pode ser null)
-          );
-      } else {
-          console.log(`[INFO] Status do pedido ${pedidoId} não alterado. E-mail não enviado.`);
-      }
-
-      res.redirect('/admin/pedidos?message=Pedido atualizado com sucesso!');
-
-  } catch (error) {
-      await connection.rollback(); // Desfaz a transação em caso de erro
-      console.error(`Erro ao atualizar pedido ${pedidoId}:`, error);
-      // Redireciona de volta para a página de detalhes com uma mensagem de erro
-      res.redirect(`/admin/pedidos/${pedidoId}?error=true&message=Erro ao atualizar pedido.`);
-  } finally {
-      if (connection) connection.release(); // Libera a conexão
-  }
+     const pedidoId = req.params.id;
+     const { status: novoStatus, codigo_rastreamento } = req.body;
+     const connection = await db.getConnection(); // Usar conexão para garantir consistência
+ 
+     try {
+         await connection.beginTransaction();
+ 
+         // 1. Busca o status ATUAL e os dados do cliente ANTES de atualizar
+         const [[pedidoAtual]] = await connection.query(
+             `SELECT p.status, u.email, u.nome
+              FROM pedidos p
+              JOIN users u ON p.user_id = u.id
+              WHERE p.id = ? FOR UPDATE`, // Lock para evitar condição de corrida
+             [pedidoId]
+         );
+ 
+         if (!pedidoAtual) {
+             await connection.rollback();
+             return res.redirect('/admin/pedidos?message=Erro: Pedido não encontrado.');
+         }
+ 
+         // Se o status não for 'enviado', limpa o código de rastreio
+         const codigoFinal = (novoStatus === 'enviado') ? codigo_rastreamento : null;
+ 
+         // 2. Atualiza o pedido no banco
+         await connection.query(
+             `UPDATE pedidos
+              SET status = ?, codigo_rastreamento = ?
+              WHERE id = ?`,
+             [novoStatus, codigoFinal, pedidoId]
+         );
+ 
+         await connection.commit(); // Confirma a atualização no banco
+ 
+         // 3. Envia o e-mail APÓS confirmar a atualização, SE o status mudou
+         if (pedidoAtual.status !== novoStatus) {
+             // Chama a função de envio de e-mail
+             await enviarEmailStatusPedido(
+                 { id: pedidoId }, // Objeto pedido (só precisamos do id aqui)
+                 { email: pedidoAtual.email, nome: pedidoAtual.nome }, // Objeto cliente
+                 novoStatus, // O novo status que foi definido
+                 codigoFinal // O código de rastreio (pode ser null)
+             );
+         } else {
+             console.log(`[INFO] Status do pedido ${pedidoId} não alterado. E-mail não enviado.`);
+         }
+ 
+         res.redirect('/admin/pedidos?message=Pedido atualizado com sucesso!');
+ 
+     } catch (error) {
+         await connection.rollback(); // Desfaz a transação em caso de erro
+         console.error(`Erro ao atualizar pedido ${pedidoId}:`, error);
+         // Redireciona de volta para a página de detalhes com uma mensagem de erro
+         res.redirect(`/admin/pedidos/${pedidoId}?error=true&message=Erro ao atualizar pedido.`);
+     } finally {
+         if (connection) connection.release(); // Libera a conexão
+     }
  });
 
 // Logout do admin

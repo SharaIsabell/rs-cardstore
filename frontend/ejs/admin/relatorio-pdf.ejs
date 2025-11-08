@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório de Vendas - RSCardStore</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            font-size: 10px; /* Tamanho base para impressão */
+            color: #333;
+        }
+        .container {
+            width: 90%;
+            margin: 20px auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0A2463;
+        }
+        .logo span {
+            color: #FF9F1C;
+        }
+        .header-info {
+            text-align: right;
+            font-size: 9px;
+            color: #555;
+        }
+        h1 {
+            font-size: 22px;
+            color: #000;
+            margin: 25px 0 10px 0;
+        }
+        h2 {
+            font-size: 16px;
+            color: #0A2463;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        /* Cards de Resumo */
+        .summary-grid {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .report-card {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .report-card-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        .report-card-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #000;
+        }
+
+        /* Tabelas */
+        .details-grid {
+            display: flex;
+            gap: 20px;
+        }
+        .table-container {
+            flex: 1;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .report-table th,
+        .report-table td {
+            padding: 8px 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .report-table th {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #555;
+            background-color: #f9f9f9;
+        }
+        .report-table td {
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .report-table td:last-child {
+            text-align: right;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">RS<span>CardStore</span></div>
+            <div class="header-info">
+                Relatório de Vendas<br>
+                Período: <strong><%= periodoSelecionado.replace('_', ' ').toUpperCase() %></strong><br>
+                Gerado em: <%= new Date().toLocaleString('pt-BR') %>
+            </div>
+        </div>
+
+        <h1>Relatório de Vendas</h1>
+
+        <h2>Resumo do Período</h2>
+        <div class="summary-grid">
+            <div class="report-card">
+                <div class="report-card-title">Receita Total</div>
+                <div class="report-card-value">
+                    <%= new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receitaData.receitaTotal || 0) %>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-card-title">Total de Pedidos Pagos</div>
+                <div class="report-card-value">
+                    <%= receitaData.numPedidos || 0 %>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-grid">
+            <div class="table-container">
+                <h2>Top 10 (Quantidade)</h2>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Unidades</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (maisVendidosQtd.length === 0) { %>
+                            <tr><td colspan="2">Nenhum dado.</td></tr>
+                        <% } %>
+                        <% maisVendidosQtd.forEach(item => { %>
+                            <tr>
+                                <td><%= item.nome %></td>
+                                <td><%= item.totalQuantidade %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="table-container">
+                <h2>Top 10 (Valor)</h2>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th>Receita</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (maisVendidosValor.length === 0) { %>
+                            <tr><td colspan="2">Nenhum dado.</td></tr>
+                        <% } %>
+                        <% maisVendidosValor.forEach(item => { %>
+                            <tr>
+                                <td><%= item.nome %></td>
+                                <td><%= new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalValor) %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

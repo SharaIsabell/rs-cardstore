@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatórios • RS Card Store</title>
+  <link rel="stylesheet" href="../../css/index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    :root {
+        --theme-transition: background-color 0.4s ease, color 0.4s ease;
+        --admin-bg: #F4F4F9;
+        --admin-card-bg: linear-gradient(145deg, #FFFFFF, #F9FAFB);
+        --admin-card-border: #DEE2E6;
+        --admin-text-primary: #111827;
+        --admin-text-secondary: #4B5563;
+        --admin-welcome-strong: #D97706;
+    }
+    body.dark-mode {
+        --admin-bg: #0D1B2A;
+        --admin-card-bg: linear-gradient(145deg, #1B263B, #0D1B2A);
+        --admin-card-border: #2a3b52;
+        --admin-text-primary: #FFFFFF;
+        --admin-text-secondary: #E0E1E2;
+        --admin-welcome-strong: var(--color-orange-vibrant);
+    }
+    body { background-color: var(--admin-bg); color: var(--admin-text-secondary); transition: var(--theme-transition); }
+    .section-title { color: var(--admin-text-primary); }
+
+    /* Estilos da Página de Relatórios */
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .report-filters form {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .report-filters label {
+        font-weight: 700;
+        color: var(--admin-text-primary);
+    }
+
+    .report-filters select, .btn-export {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--admin-card-border);
+        background-color: var(--admin-card-bg);
+        color: var(--admin-text-primary);
+        font-family: var(--font-body);
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-export {
+        background-color: var(--color-orange-vibrant);
+        border-color: var(--color-orange-vibrant);
+        color: white;
+    }
+    .btn-export:hover {
+        opacity: 0.85;
+    }
+
+    /* Cards de Resumo */
+    .report-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2.5rem;
+    }
+    .report-card {
+        background: var(--admin-card-bg);
+        border: 1px solid var(--admin-card-border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    }
+    .report-card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--admin-text-secondary);
+        margin-bottom: 0.5rem;
+    }
+    .report-card-value {
+        font-family: var(--font-heading);
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: var(--admin-text-primary);
+    }
+
+    /* Tabelas de Detalhes */
+    .report-details-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    @media (max-width: 992px) {
+        .report-details-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .report-table-container {
+        background: var(--admin-card-bg);
+        border: 1px solid var(--admin-card-border);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .report-table-container h3 {
+        font-family: var(--font-heading);
+        font-size: 1.2rem;
+        color: var(--admin-text-primary);
+        padding: 1rem 1.5rem;
+        margin: 0;
+        border-bottom: 1px solid var(--admin-card-border);
+    }
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .report-table th, .report-table td {
+        padding: 1rem 1.5rem;
+        text-align: left;
+        border-bottom: 1px solid var(--admin-card-border);
+    }
+    .report-table tr:last-child td {
+        border-bottom: none;
+    }
+    .report-table th {
+        font-size: 0.85rem;
+        color: var(--admin-text-secondary);
+        text-transform: uppercase;
+    }
+    .report-table td {
+        color: var(--admin-text-primary);
+        font-weight: 600;
+    }
+    .report-table td:last-child {
+        text-align: right;
+        font-weight: 700;
+    }
+
+    /* ADICIONAR ESTES ESTILOS */
+        .report-header .btn-export.csv {
+            background-color: #28a745; 
+            border-color: #28a745;
+            color: white;
+        }
+        .report-header .btn-export.pdf {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+        .report-header .btn-export.csv:hover { background-color: #218838; }
+        .report-header .btn-export.pdf:hover { background-color: #c82333; }
+  </style>
+</head>
+<%- include('../partials/header') %>
+<body>
+  <main class="container section">
+    
+    <div class="report-header">
+      <h1 class="section-title" style="margin-bottom: 0;">Relatório de Vendas</h1>
+      
+      <a href="/admin/relatorios/exportar/csv?periodo=<%= periodoSelecionado %>" class="btn-export">
+        <i class="fas fa-file-csv"></i> Exportar CSV
+      </a>
+
+      <a href="/admin/relatorios/exportar/pdf?periodo=<%= periodoSelecionado %>" class="btn-export pdf">
+            <i class="fas fa-file-pdf"></i> Exportar PDF
+    </a>
+    </div>
+
+    <div class="report-filters">
+        <form action="/admin/relatorios" method="GET">
+            <label for="periodo">Selecionar Período:</label>
+            <select name="periodo" id="periodo" onchange="this.form.submit()">
+                <option value="hoje" <%= periodoSelecionado === 'hoje' ? 'selected' : '' %>>Hoje</option>
+                <option value="semana" <%= periodoSelecionado === 'semana' ? 'selected' : '' %>>Últimos 7 dias</option>
+                <option value="mes" <%= periodoSelecionado === 'mes' ? 'selected' : '' %>>Últimos 30 dias</option>
+                <option value="mes_atual" <%= periodoSelecionado === 'mes_atual' ? 'selected' : '' %>>Este Mês</option>
+            </select>
+        </form>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid var(--admin-card-border); margin: 2rem 0;">
+
+    <div class="report-summary-grid">
+        <div class="report-card">
+            <div class="report-card-title">Receita Total</div>
+            <div class="report-card-value">
+                <%= new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(receitaData.receitaTotal || 0) %>
+            </div>
+        </div>
+        <div class="report-card">
+            <div class="report-card-title">Total de Pedidos Pagos</div>
+            <div class="report-card-value">
+                <%= receitaData.numPedidos || 0 %>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-details-grid">
+        <div class="report-table-container">
+            <h3>Top 10 Mais Vendidos (Quantidade)</h3>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Unidades</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (maisVendidosQtd.length === 0) { %>
+                        <tr><td colspan="2">Nenhum dado encontrado.</td></tr>
+                    <% } %>
+                    <% maisVendidosQtd.forEach(item => { %>
+                        <tr>
+                            <td><%= item.nome %></td>
+                            <td><%= item.totalQuantidade %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="report-table-container">
+            <h3>Top 10 Mais Vendidos (Valor)</h3>
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Receita</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (maisVendidosValor.length === 0) { %>
+                        <tr><td colspan="2">Nenhum dado encontrado.</td></tr>
+                    <% } %>
+                    <% maisVendidosValor.forEach(item => { %>
+                        <tr>
+                            <td><%= item.nome %></td>
+                            <td><%= new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.totalValor) %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+  </main>
+  <%- include('../partials/footer') %>
+  <script src="../../js/theme.js" defer></script>
+</body>
+</html>
