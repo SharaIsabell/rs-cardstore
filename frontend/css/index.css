@@ -1326,3 +1326,153 @@ body.dark-mode .search-fab-button {
     color: #0D1B2A; /* Texto escuro no botão laranja */
     box-shadow: 0 5px 15px rgba(0,0,0,0.4);
 }
+
+.filter-toolbar {
+    display: flex;
+    flex-wrap: wrap; /* Permite que os filtros quebrem a linha em telas menores */
+    align-items: flex-end; /* Alinha os botões e inputs na base */
+    gap: 20px;
+    padding: 20px;
+    background-color: var(--color-gray-light);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
+    margin-bottom: 50px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: var(--theme-transition);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-group label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    transition: var(--theme-transition);
+    display: flex; /* Para alinhar radio/checkbox */
+    align-items: center; /* Para alinhar radio/checkbox */
+}
+
+.filter-group input[type="number"],
+.filter-group select {
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-family: var(--font-body);
+    font-size: 1rem;
+    background-color: var(--color-white);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: var(--theme-transition);
+    width: 140px; /* Largura fixa para inputs */
+}
+
+.filter-group select {
+     width: 180px; /* Largura para o select de ordenação */
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: var(--color-orange-vibrant);
+    box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.2);
+}
+
+.filter-group .radio-group,
+.filter-group .checkbox-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    /* Ajusta a altura para alinhar com os outros inputs */
+    padding: 12px 0;
+    height: 49px; /* Mesma altura dos inputs (12+12+1+1+23(font)) */
+    box-sizing: border-box;
+}
+
+.filter-group .radio-group label,
+.filter-group .checkbox-group label {
+    font-weight: normal; /* Texto normal para as opções */
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.filter-group input[type="radio"],
+.filter-group input[type="checkbox"] {
+    margin-right: 5px;
+    /* Melhora a aparência dos radios/checkboxes */
+    transform: scale(1.1);
+    accent-color: var(--color-orange-vibrant);
+    cursor: pointer;
+}
+
+/* Botão de filtrar */
+.filter-toolbar .cta-button {
+    padding: 12px 20px; /* Ajusta a altura do botão */
+    font-size: 1rem;
+    margin-left: auto; /* Empurra o botão para a direita */
+    height: 49px; /* Mesma altura dos inputs */
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.btn-outline {
+    /* Herda a altura do .filter-toolbar para alinhamento */
+    height: 49px; 
+    padding: 12px 20px;
+    box-sizing: border-box;
+
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    
+    background-color: transparent;
+    color: var(--color-blue-dark);
+    border: 2px solid var(--color-blue-dark);
+    
+    border-radius: 50px; /* Combina com o cta-button */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    /* Para alinhamento flex */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-outline:hover {
+    background-color: var(--color-blue-dark);
+    color: var(--color-white);
+    transform: translateY(-2px); /* Efeito sutil */
+}
+
+
+/* Dark Mode para Filtros */
+body.dark-mode .filter-toolbar {
+    background-color: var(--color-gray-light);
+    border-color: #2a3b52;
+}
+
+body.dark-mode .filter-group label {
+    color: var(--color-text);
+}
+
+body.dark-mode .filter-group input[type="number"],
+body.dark-mode .filter-group select {
+    background-color: var(--color-white); /* Fundo azul escuro */
+    color: var(--color-text);
+    border-color: #2a3b52;
+}
+
+body.dark-mode .btn-outline {
+    color: var(--color-blue-dark); /* Texto claro */
+    border-color: var(--color-blue-dark); /* Borda clara */
+}
+
+body.dark-mode .btn-outline:hover {
+    background-color: var(--color-blue-dark); /* Fundo claro */
+    color: var(--color-white); /* Texto escuro */
+}

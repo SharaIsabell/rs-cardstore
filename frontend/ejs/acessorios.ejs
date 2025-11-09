@@ -33,38 +33,14 @@
 
     <section class="section" id="lista-produtos">
       <div class="container">
-        <div class="product-toolbar">
-          <div class="filter-controls">
-            <select name="tipo_produto" id="tipo_produto">
-              <option value="">Categoria</option>
-              <option value="sleeves">Sleeves</option>
-              <option value="deckbox">Deck Boxes</option>
-              <option value="playmat">Playmats</option>
-              <option value="binder">Binders / Pastas</option>
-              <option value="storage">Armazenamento</option>
-              <option value="acessorios">Outros Acessórios</option>
-            </select>
+        <!-- Toolbar com filtros e pequenos ícones para reforçar o tema -->
+        <%- include('partials/filter-toolbar', { 
+            currentFilters: currentFilters, 
+            baseUrl: baseUrl,
+            searchTerm: locals.searchTerm 
+        }) %>
 
-            <select name="marca" id="marca">
-              <option value="">Marca</option>
-              <option value="dragonshield">Dragon Shield</option>
-              <option value="ultrapro">Ultra Pro</option>
-              <option value="bcw">BCW</option>
-              <option value="kmc">KMC</option>
-            </select>
-          </div>
-
-          <div class="sort-options">
-            <label for="sort">Ordenar por:</label>
-            <select name="sort" id="sort">
-              <option value="relevancia">Relevância</option>
-              <option value="preco-menor">Menor Preço</option>
-              <option value="preco-maior">Maior Preço</option>
-              <option value="recentes">Mais Recentes</option>
-            </select>
-          </div>
-        </div>
-
+        <!-- GRID DE PRODUTOS -->
         <div class="products-grid">
           <% if (produtos && produtos.length > 0) { %>
             <% produtos.forEach(produto => { %>
@@ -122,7 +98,7 @@
             <p>Nenhum acessório encontrado no momento.</p>
           <% } %>
         </div>
-
+        
         <%- include('partials/pagination') %>
 
       </div>

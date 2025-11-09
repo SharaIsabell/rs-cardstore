@@ -32,32 +32,11 @@
 
         <section class="section" id="lista-produtos">
             <div class="container">
-                <div class="product-toolbar">
-                    <div class="filter-controls">
-                        <select name="tipo_produto" id="tipo_produto">
-                            <option value="">Tipo de Produto</option>
-                            <option value="booster">Boosters</option>
-                            <option value="deck">Decks</option>
-                            <option value="carta">Cartas Avulsas</option>
-                            <option value="acessorio">Acessórios</option>
-                        </select>
-                        <select name="edicao" id="edicao">
-                            <option value="">Todas as Edições</option>
-                            <option value="otj">Outlaws of Thunder Junction</option>
-                            <option value="mkm">Murders at Karlov Manor</option>
-                            <option value="lci">The Lost Caverns of Ixalan</option>
-                        </select>
-                    </div>
-                    <div class="sort-options">
-                        <label for="sort">Ordenar por:</label>
-                        <select name="sort" id="sort">
-                            <option value="relevancia">Relevância</option>
-                            <option value="preco-menor">Menor Preço</option>
-                            <option value="preco-maior">Maior Preço</option>
-                            <option value="recentes">Mais Recentes</option>
-                        </select>
-                    </div>
-                </div>
+                <%- include('partials/filter-toolbar', { 
+                    currentFilters: currentFilters, 
+                    baseUrl: baseUrl,
+                    searchTerm: locals.searchTerm 
+                }) %>
 
                 <div class="products-grid">
                     <% if (typeof produtos !== 'undefined' && produtos.length) { %>

@@ -30,28 +30,11 @@
         <section class="section" id="lista-produtos">
             <div class="container">
                 <h2 class="section-title">Todos os Produtos em Promoção</h2>
-
-                <div class="product-toolbar">
-                    <div>
-                        <label for="sort-by">Ordenar por:</label>
-                        <select id="sort-by" name="sort-by">
-                            <option value="popularity">Popularidade</option>
-                            <option value="price-asc">Menor Preço</option>
-                            <option value="price-desc">Maior Preço</option>
-                            <option value="newest">Mais Recentes</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="filter-game">Filtrar por Jogo:</label>
-                        <select id="filter-game" name="filter-game">
-                            <option value="all">Todos os Jogos</option>
-                            <option value="magic">Magic</option>
-                            <option value="yugioh">Yu-Gi-Oh!</option>
-                            <option value="pokemon">Pokémon</option>
-                            <option value="acessorios">Acessórios</option>
-                        </select>
-                    </div>
-                </div>
+                <%- include('partials/filter-toolbar', { 
+                    currentFilters: currentFilters, 
+                    baseUrl: baseUrl,
+                    searchTerm: locals.searchTerm 
+                }) %>
 
                 <div class="products-grid">
                     <% if (produtos && produtos.length > 0) { %>

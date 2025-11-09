@@ -1,0 +1,47 @@
+<form method="GET" class="filter-toolbar">
+
+    <%# Se estivermos em uma página de busca, mantém o termo de busca %>
+    <% if (locals.searchTerm) { %>
+        <input type="hidden" name="termo" value="<%= searchTerm %>">
+    <% } %>
+
+    <div class="filter-group">
+        <label for="sort_by">Ordenar por</label>
+        <select name="sort_by" id="sort_by">
+            <option value="newest" <%= (currentFilters.sort_by === 'newest' || !currentFilters.sort_by) ? 'selected' : '' %>>Mais Novos</option>
+            <option value="price_asc" <%= currentFilters.sort_by === 'price_asc' ? 'selected' : '' %>>Preço: Menor p/ Maior</option>
+            <option value="price_desc" <%= currentFilters.sort_by === 'price_desc' ? 'selected' : '' %>>Preço: Maior p/ Menor</option>
+            <option value="name_asc" <%= currentFilters.sort_by === 'name_asc' ? 'selected' : '' %>>Nome: A-Z</option>
+            <option value="name_desc" <%= currentFilters.sort_by === 'name_desc' ? 'selected' : '' %>>Nome: Z-A</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label for="min_price">Preço Mín.</label>
+        <input type="number" name="min_price" id="min_price" placeholder="R$ 0" value="<%= currentFilters.min_price %>" min="0" step="0.01">
+    </div>
+    <div class="filter-group">
+        <label for="max_price">Preço Máx.</label>
+        <input type="number" name="max_price" id="max_price" placeholder="R$ 1000" value="<%= currentFilters.max_price %>" min="0" step="0.01">
+    </div>
+
+    <div class="filter-group">
+        <label>Estado</label>
+        <div class="radio-group">
+            <label><input type="radio" name="state" value="" <%= !currentFilters.state ? 'checked' : '' %>> Todos</label>
+            <label><input type="radio" name="state" value="novo" <%= currentFilters.state === 'novo' ? 'checked' : '' %>> Novo</label>
+            <label><input type="radio" name="state" value="usado" <%= currentFilters.state === 'usado' ? 'checked' : '' %>> Usado</label>
+        </div>
+    </div>
+    
+    <div class="filter-group">
+        <label>Desconto</label>
+        <div class="checkbox-group">
+             <label><input type="checkbox" name="on_sale" value="true" <%= currentFilters.on_sale === 'true' ? 'checked' : '' %>> Em promoção</label>
+        </div>
+    </div>
+
+    <a href="<%= baseUrl %>" class="btn-outline">Limpar</a>
+    <button type="submit" class="cta-button">Filtrar</button>
+
+</form>

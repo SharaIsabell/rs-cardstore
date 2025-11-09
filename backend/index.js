@@ -139,11 +139,18 @@ router.get('/', async (req, res) => {
 
 async function renderProductPage(req, res, viewName, category, baseUrl, searchTerm = null) {
     try {
+        const {
+            min_price,
+            max_price,
+            on_sale,
+            state,
+            sort_by
+        } = req.query;
         const page = parseInt(req.query.page, 10) || 1;
         const limit = 4; // Limite de 4 produtos por página
         const offset = (page - 1) * limit;
 
-        let whereClause = '';
+        const whereConditions = [];
         const queryParams = [];
 
         if (searchTerm) {
@@ -151,11 +158,50 @@ async function renderProductPage(req, res, viewName, category, baseUrl, searchTe
             whereClause = 'WHERE (nome LIKE ? OR descricao LIKE ?)';
             queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
         } else if (category) {
-            whereClause = 'WHERE categoria = ?';
+            whereConditions.push('categoria = ?');
             queryParams.push(category);
         } else {
             // Fallback para /promocoes
-            whereClause = 'WHERE promocao = TRUE';
+            whereConditions.push('promocao = TRUE');
+        }
+
+        // Adiciona os novos filtros de preço
+        if (min_price) {
+            whereConditions.push('(preco * (1 - desconto_percentual / 100)) >= ?');
+            queryParams.push(parseFloat(min_price));
+        }
+        if (max_price) {
+            whereConditions.push('(preco * (1 - desconto_percentual / 100)) <= ?');
+            queryParams.push(parseFloat(max_price));
+        }
+        // Adiciona filtro de promoção (desconto)
+        if (on_sale === 'true') {
+            whereConditions.push('desconto_percentual > 0');
+        }
+        // Adiciona filtro de estado (novo/usado)
+        if (state === 'novo' || state === 'usado') {
+            whereConditions.push('estado = ?');
+            queryParams.push(state);
+        }
+
+        // Junta todas as condições com 'AND'
+        const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+        // --- 3. Construção da cláusula ORDER BY ---
+        let orderByClause = 'ORDER BY id DESC'; // Default: Mais novos (relevância)
+        switch (sort_by) {
+            case 'price_asc':
+                orderByClause = 'ORDER BY (preco * (1 - desconto_percentual / 100)) ASC';
+                break;
+            case 'price_desc':
+                orderByClause = 'ORDER BY (preco * (1 - desconto_percentual / 100)) DESC';
+                break;
+            case 'name_asc':
+                orderByClause = 'ORDER BY nome ASC';
+                break;
+            case 'name_desc':
+                orderByClause = 'ORDER BY nome DESC';
+                break;
         }
 
         // Contar o total de produtos para calcular as páginas
@@ -166,14 +212,14 @@ async function renderProductPage(req, res, viewName, category, baseUrl, searchTe
 
         const totalPages = Math.ceil(total / limit);
 
-        // Buscar os produtos da página atual
+        // Buscar os produtos da página atual com filtros e ordenação
         const [produtos] = await db.query(
-            `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo 
-         FROM produtos 
-         ${whereClause}
-         ORDER BY id DESC 
-         LIMIT ? 
-         OFFSET ?`,
+            `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, promocao, novo, estado 
+             FROM produtos 
+             ${whereClause}
+             ${orderByClause} 
+             LIMIT ? 
+             OFFSET ?`,
             [...queryParams, limit, offset]
         );
 
@@ -182,7 +228,15 @@ async function renderProductPage(req, res, viewName, category, baseUrl, searchTe
             totalPages: totalPages,
             currentPage: page,
             baseUrl: baseUrl,
-            searchTerm: searchTerm // Passa o termo de busca para a view (para a paginação)
+            searchTerm: searchTerm,
+            // Passa os filtros atuais para a view (para preencher o formulário)
+            currentFilters: {
+                min_price: min_price || '',
+                max_price: max_price || '',
+                on_sale: on_sale || '',
+                state: state || '',
+                sort_by: sort_by || 'newest'
+            }
         });
 
     } catch (err) {
