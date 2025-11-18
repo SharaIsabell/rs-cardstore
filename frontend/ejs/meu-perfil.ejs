@@ -120,9 +120,41 @@
                             </div>
                         </div>
                         <button type="submit" class="cta-button">Adicionar Endereço</button>
+
                     </form>
                 </div>
+                <div class="profile-card">
+                    <h3><i class="fa-solid fa-heart"></i> Meus Favoritos</h3>
+                    <div class="favorite-list">
+                        <% if (!favoritos || favoritos.length === 0) { %>
+                            <p class="empty-list-message">Você ainda não adicionou produtos aos favoritos.</p>
+                        <% } else { %>
+                            <% favoritos.forEach(fav => { %>
+                                <div class="favorite-item" id="favorito-item-<%= fav.id %>">
+                                    <img src="<%= fav.imagem_url || 'https://via.placeholder.com/150?text=' + fav.categoria %>" alt="<%= fav.nome %>" class="favorite-item-img">
+                                    
+                                    <div class="favorite-item-info">
+                                        <h4><%= fav.nome %></h4>
+                                        <% if (fav.desconto_percentual > 0) { %>
+                                            <% const precoFinal = fav.preco * (1 - fav.desconto_percentual / 100); %>
+                                            <span>R$ <%= Number(precoFinal).toFixed(2).replace('.', ',') %></span>
+                                        <% } else { %>
+                                            <span>R$ <%= Number(fav.preco).toFixed(2).replace('.', ',') %></span>
+                                        <% } %>
+                                    </div>
 
+                                    <div class="favorite-item-actions">
+                                        <a href="/produto/<%= fav.id %>" class="btn-text" style="white-space: nowrap;">Ver Produto</a>
+                                        
+                                        <form action="/api/favoritos/toggle/<%= fav.id %>" method="POST" class="form-remove-favorito">
+                                            <button type="submit" class="btn-text btn-danger">Remover</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    </div>
+                </div>
                 <h3 class="section-subtitle">Meus Endereços Salvos</h3>
                 <div class="address-list">
                     <% if (enderecos.length === 0) { %>

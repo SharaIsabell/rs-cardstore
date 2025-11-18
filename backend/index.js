@@ -113,6 +113,16 @@ async function enviarConfirmacaoEGerarNF(connection, pedido_id) {
 
 router.get('/', async (req, res) => {
     try {
+        // Lógica de favoritos
+        const userId = req.session.userId || null;
+        const isUserLoggedIn = !!userId;
+        let favoritosSet = new Set();
+
+        if (userId) {
+            const [favRows] = await db.query('SELECT produto_id FROM user_favoritos WHERE user_id = ?', [userId]);
+            favoritosSet = new Set(favRows.map(f => f.produto_id));
+        }
+        
         const [novosProdutos] = await db.query(
             `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
          FROM produtos
@@ -130,15 +140,32 @@ router.get('/', async (req, res) => {
             [idsIgnorados]
         );
         const destaques = [...novosProdutos, ...produtosEmPromocao];
-        res.render('index', { destaques: destaques });
+        res.render('index', { 
+            destaques: destaques,
+            favoritosSet: favoritosSet,
+            isUserLoggedIn: isUserLoggedIn
+        });
     } catch (err) {
         console.error("Erro ao carregar destaques da página inicial:", err);
-        res.render('index', { destaques: [] });
+        res.render('index', { 
+            destaques: [], 
+            favoritosSet: new Set(),
+            isUserLoggedIn: false
+        });
     }
 });
 
 async function renderProductPage(req, res, viewName, category, baseUrl, searchTerm = null) {
     try {
+        const userId = req.session.userId || null;
+        const isUserLoggedIn = !!userId;
+        let favoritosSet = new Set();
+
+        if (userId) {
+            const [favRows] = await db.query('SELECT produto_id FROM user_favoritos WHERE user_id = ?', [userId]);
+            favoritosSet = new Set(favRows.map(f => f.produto_id));
+        }
+
         const {
             min_price,
             max_price,
@@ -236,7 +263,9 @@ async function renderProductPage(req, res, viewName, category, baseUrl, searchTe
                 on_sale: on_sale || '',
                 state: state || '',
                 sort_by: sort_by || 'newest'
-            }
+            },
+            favoritosSet: favoritosSet,
+            isUserLoggedIn: isUserLoggedIn
         });
 
     } catch (err) {
@@ -268,8 +297,9 @@ router.get('/busca', async (req, res) => {
 });
 
 router.get('/produto/:id', async (req, res) => {
-    try {
+    try { 
         const { id } = req.params;
+        const userId = req.session.userId || null;
         const [rows] = await db.query(
             `SELECT id, nome, descricao, preco, desconto_percentual, imagem_url, categoria, estoque 
          FROM produtos 
@@ -279,7 +309,24 @@ router.get('/produto/:id', async (req, res) => {
         if (rows.length === 0) {
             return res.status(404).send('Produto não encontrado.');
         }
-        res.render('produto', { produto: rows[0] });
+        let isFavorito = false;
+        const isUserLoggedIn = !!userId;
+
+        if (isUserLoggedIn) {
+            const [favoritoRows] = await db.query(
+                'SELECT id FROM user_favoritos WHERE user_id = ? AND produto_id = ?',
+                [userId, id]
+            );
+            if (favoritoRows.length > 0) {
+                isFavorito = true;
+            }
+        }
+
+        res.render('produto', { 
+            produto: rows[0],
+            isFavorito: isFavorito,
+            isUserLoggedIn: isUserLoggedIn
+        });
     } catch (err) {
         console.error('Erro ao carregar o produto:', err);
         res.status(500).send('Erro ao carregar a página do produto.');
@@ -1713,13 +1760,25 @@ router.post('/resend-verification', async (req, res) => {
 // 1. GET: Exibe a página "Minha Conta"
 router.get('/minha-conta', isAuthenticated, async (req, res) => {
     try {
+        const userId = req.session.userId;
+
         const [userRows] = await db.query(
             'SELECT nome, email, telefone FROM users WHERE id = ?',
-            [req.session.userId]
+            [userId]
         );
         const [enderecos] = await db.query(
             'SELECT * FROM user_enderecos WHERE user_id = ? ORDER BY is_principal DESC, id ASC',
-            [req.session.userId]
+             [userId]
+        );
+
+        // Busca os produtos favoritos fazendo JOIN com a tabela de produtos
+        const [favoritos] = await db.query(
+            `SELECT p.id, p.nome, p.preco, p.desconto_percentual, p.imagem_url, p.categoria 
+             FROM user_favoritos uf
+             JOIN produtos p ON uf.produto_id = p.id
+             WHERE uf.user_id = ?
+             ORDER BY uf.criado_em DESC`,
+            [userId]
         );
 
         if (userRows.length === 0) {
@@ -1729,7 +1788,7 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
         res.render('meu-perfil', {
             user: userRows[0],
             enderecos: enderecos,
-            // Passa as mensagens 'flash' para a view
+            favoritos: favoritos,
             messages: res.locals.getMessages() 
         });
 
@@ -1949,6 +2008,35 @@ router.post('/minha-conta/endereco/editar/:id', isAuthenticated, async (req, res
         req.session.messages = { error: 'Erro ao atualizar o endereço.' };
     }
     res.redirect('/minha-conta');
+});
+
+router.post('/api/favoritos/toggle/:id', isAuthenticated, async (req, res) => {
+    try {
+        const produto_id = req.params.id;
+        const user_id = req.session.userId;
+
+        // Verifica se o favorito já existe
+        const [existing] = await db.query(
+            'SELECT id FROM user_favoritos WHERE user_id = ? AND produto_id = ?',
+            [user_id, produto_id]
+        );
+
+        if (existing.length > 0) {
+            // Se existe, remove (unfavorite)
+            await db.query('DELETE FROM user_favoritos WHERE id = ?', [existing[0].id]);
+            res.json({ success: true, isFavorito: false, message: 'Removido dos favoritos.' });
+        } else {
+            // Se não existe, adiciona (favorite)
+            await db.query('INSERT INTO user_favoritos (user_id, produto_id) VALUES (?, ?)', 
+                [user_id, produto_id]
+            );
+            res.json({ success: true, isFavorito: true, message: 'Adicionado aos favoritos!' });
+        }
+
+    } catch (error) {
+        console.error('Erro ao alternar favorito:', error);
+        res.status(500).json({ success: false, message: 'Erro no servidor ao processar sua solicitação.' });
+    }
 });
 
 module.exports = router;

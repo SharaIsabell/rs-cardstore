@@ -37,6 +37,51 @@
     line-height: 1.2;
 }
 
+.product-info {
+    display: flex;
+    flex-direction: column;
+}
+
+/* NOVO: Wrapper para alinhar título e botão de favorito */
+.product-title-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.product-title {
+    font-family: var(--font-heading);
+    font-size: 2.8rem;
+    color: var(--color-blue-dark);
+    /* margin-bottom: 1rem; (Movido para o wrapper) */
+    line-height: 1.2;
+    flex-grow: 1; /* Permite que o título ocupe o espaço */
+}
+
+/* NOVO: Estilos do botão de favorito */
+.btn-favorite {
+    font-size: 2.2rem;
+    color: #ccc; /* Cor padrão (não favoritado) */
+    text-decoration: none;
+    transition: all 0.3s ease;
+    padding-top: 0.5rem; /* Ajuste de alinhamento vertical */
+}
+
+.btn-favorite:hover {
+    color: #aaa;
+    transform: scale(1.1);
+}
+
+.btn-favorite.favorited {
+    color: #e74c3c; /* Vermelho (favoritado) */
+}
+
+.btn-favorite.favorited:hover {
+    color: #c0392b; /* Vermelho mais escuro */
+}
+
 .product-price-main {
     font-family: var(--font-heading);
     font-size: 2.5rem;

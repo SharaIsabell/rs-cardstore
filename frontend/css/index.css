@@ -386,6 +386,38 @@ main.container.section > *:last-child {
     border: 1px solid #d8d8ec; 
 }
 
+.btn-favorite-card {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 3;
+    font-size: 1.5rem;
+    color: #ccc;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.5); /* Fundo sutil para melhor visibilidade */
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+.btn-favorite-card:hover {
+    color: #aaa;
+    transform: scale(1.1);
+}
+.btn-favorite-card.favorited {
+    color: #e74c3c; /* Vermelho */
+}
+.btn-favorite-card.favorited:hover {
+    color: #c0392b; /* Vermelho mais escuro */
+}
+
+body.dark-mode .btn-favorite-card {
+    background: rgba(27, 38, 59, 0.5); /* Fundo sutil modo escuro */
+}
+
 .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
@@ -1156,6 +1188,74 @@ body.dark-mode .btn-text.btn-danger {
 }
 body.dark-mode .btn-text.btn-danger:hover {
     color: #e74c3c;
+}
+
+.favorite-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.favorite-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eee;
+}
+.favorite-item:last-child {
+    border-bottom: none;
+}
+
+.favorite-item-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.favorite-item-info {
+    flex-grow: 1;
+}
+
+.favorite-item-info h4 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    color: var(--color-blue-dark);
+    margin-bottom: 0.25rem;
+}
+
+.favorite-item-info span {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-orange-vibrant);
+}
+
+.favorite-item-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.empty-list-message {
+    padding: 2rem;
+    text-align: center;
+    color: #777;
+}
+
+/* Dark Mode para a lista de favoritos */
+body.dark-mode .favorite-item {
+    border-bottom-color: #2a3b52;
+}
+body.dark-mode .favorite-item-img {
+    border-color: #2a3b52;
+}
+body.dark-mode .favorite-item-info h4 {
+    color: var(--color-blue-dark);
+}
+body.dark-mode .empty-list-message {
+    color: #999;
 }
 
 /* ====================================================== */

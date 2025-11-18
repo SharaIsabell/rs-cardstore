@@ -133,4 +133,61 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target === modal) closeModal(); // Fecha se clicar no overlay
         });
     }
+
+    const formsRemoverFavorito = document.querySelectorAll('.form-remove-favorito');
+    
+    formsRemoverFavorito.forEach(form => {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = form.action;
+            const button = form.querySelector('button[type="submit"]');
+            
+            // Extrai o ID do produto da URL (ex: /api/favoritos/toggle/123)
+            const produtoId = url.split('/').pop();
+            if (!produtoId) return;
+
+            // Feedback de carregamento
+            button.disabled = true;
+            button.textContent = 'Removendo...';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Remove o item da interface
+                    const itemElement = document.getElementById(`favorito-item-${produtoId}`);
+                    if (itemElement) {
+                        itemElement.style.transition = 'opacity 0.5s ease';
+                        itemElement.style.opacity = '0';
+                        setTimeout(() => {
+                            itemElement.remove();
+                            // Verifica se a lista ficou vazia
+                            const list = document.querySelector('.favorite-list');
+                            if (list && !list.querySelector('.favorite-item')) {
+                                list.innerHTML = '<p class="empty-list-message">Você ainda não adicionou produtos aos favoritos.</p>';
+                            }
+                        }, 500);
+                    }
+                } else {
+                    throw new Error(data.message || 'Erro ao remover favorito.');
+                }
+
+            } catch (error) {
+                console.error('Erro ao remover favorito:', error);
+                alert('Não foi possível remover o favorito. Tente novamente.');
+                // Restaura o botão em caso de erro
+                button.disabled = false;
+                button.textContent = 'Remover';
+            }
+        });
+    });
 });

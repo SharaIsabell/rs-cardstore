@@ -110,7 +110,7 @@ async function main() {
       FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
     );
 
-    /* --- NOVA TABELA: ENDEREÇOS DO USUÁRIO --- */
+    /* --- ENDEREÇOS DO USUÁRIO --- */
     CREATE TABLE IF NOT EXISTS user_enderecos (
       id INT AUTO_INCREMENT PRIMARY KEY,
       user_id INT NOT NULL,
@@ -124,6 +124,18 @@ async function main() {
       cidade VARCHAR(100) NOT NULL,
       estado VARCHAR(2) NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    /* --- FAVORITOS DO USUÁRIO --- */
+    CREATE TABLE IF NOT EXISTS user_favoritos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      produto_id INT NOT NULL,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (produto_id) REFERENCES produtos(id) ON DELETE CASCADE,
+      /* Garante que um usuário só possa favoritar um produto uma vez */
+      UNIQUE KEY uk_user_produto (user_id, produto_id) 
     );
   `);
 
