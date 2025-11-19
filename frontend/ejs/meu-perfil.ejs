@@ -146,6 +146,19 @@
                                     <div class="favorite-item-actions">
                                         <a href="/produto/<%= fav.id %>" class="btn-text" style="white-space: nowrap;">Ver Produto</a>
                                         
+                                        <% if (fav.estoque > 0) { %>
+                                            <form action="/carrinho/adicionar/<%= fav.id %>" method="POST" class="form-add-favorito-carrinho">
+                                                <input type="hidden" name="quantity" value="1">
+                                                <button type="submit" class="btn-text btn-add-cart">
+                                                    <i class="fa-solid fa-cart-plus"></i> Adicionar
+                                                </button>
+                                            </form>
+                                        <% } else { %>
+                                            <span class="btn-text btn-disabled">
+                                                <i class="fa-solid fa-times-circle"></i> Indisponível
+                                            </span>
+                                        <% } %>                                        
+
                                         <form action="/api/favoritos/toggle/<%= fav.id %>" method="POST" class="form-remove-favorito">
                                             <button type="submit" class="btn-text btn-danger">Remover</button>
                                         </form>

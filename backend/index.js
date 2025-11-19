@@ -1773,7 +1773,7 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
 
         // Busca os produtos favoritos fazendo JOIN com a tabela de produtos
         const [favoritos] = await db.query(
-            `SELECT p.id, p.nome, p.preco, p.desconto_percentual, p.imagem_url, p.categoria 
+            `SELECT p.id, p.nome, p.preco, p.desconto_percentual, p.imagem_url, p.categoria, p.estoque 
              FROM user_favoritos uf
              JOIN produtos p ON uf.produto_id = p.id
              WHERE uf.user_id = ?
