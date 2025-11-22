@@ -145,7 +145,7 @@
 
                                     <div class="favorite-item-actions">
                                         <a href="/produto/<%= fav.id %>" class="btn-text" style="white-space: nowrap;">Ver Produto</a>
-                                        
+
                                         <% if (fav.estoque > 0) { %>
                                             <form action="/carrinho/adicionar/<%= fav.id %>" method="POST" class="form-add-favorito-carrinho">
                                                 <input type="hidden" name="quantity" value="1">
@@ -157,8 +157,8 @@
                                             <span class="btn-text btn-disabled">
                                                 <i class="fa-solid fa-times-circle"></i> Indisponível
                                             </span>
-                                        <% } %>                                        
-
+                                        <% } %>
+                                        
                                         <form action="/api/favoritos/toggle/<%= fav.id %>" method="POST" class="form-remove-favorito">
                                             <button type="submit" class="btn-text btn-danger">Remover</button>
                                         </form>
@@ -168,6 +168,47 @@
                         <% } %>
                     </div>
                 </div>
+
+                </div> <div class="profile-card">
+                    <h3><i class="fa-solid fa-stamp"></i> Programa de Fidelidade</h3>
+                    <div class="fidelidade-card-container">
+                        <% for (let i = 1; i <= 10; i++) { %>
+                            <div class="fidelidade-stamp <%= (i <= selos_atuais) ? 'filled' : '' %>">
+                                <% if (i <= selos_atuais) { %>
+                                    <i class="fa-solid fa-stamp"></i>
+                                <% } else { %>
+                                    <i class="fa-regular fa-circle"></i>
+                                <% } %>
+                                <span><%= i %></span>
+                            </div>
+                        <% } %>
+                    </div>
+                    <p class="fidelidade-info">
+                        Complete <strong>10 selos</strong> (1 por pedido entregue) e ganhe um cupom de <strong>10% OFF</strong>!
+                    </p>
+                </div>
+
+                <div class="profile-card">
+                    <h3><i class="fa-solid fa-ticket-alt"></i> Meus Cupons</h3>
+                    <div class="cupom-list">
+                        <% if (!cupons || cupons.length === 0) { %>
+                            <p class="empty-list-message">Você ainda não possui cupons de desconto.</p>
+                        <% } else { %>
+                            <% cupons.forEach(cupom => { %>
+                                <div class="cupom-item">
+                                    <div class="cupom-icon">
+                                        <i class="fa-solid fa-ticket-alt"></i>
+                                    </div>
+                                    <div class="cupom-info">
+                                        <h4><%= cupom.codigo %></h4>
+                                        <p><%= cupom.descricao || `Cupom de ${cupom.tipo === 'percentual' ? cupom.valor + '%' : 'R$' + cupom.valor} OFF` %></p>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        <% } %>
+                    </div>
+                </div>
+
                 <h3 class="section-subtitle">Meus Endereços Salvos</h3>
                 <div class="address-list">
                     <% if (enderecos.length === 0) { %>

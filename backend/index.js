@@ -1781,6 +1781,17 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
             [userId]
         );
 
+        // 1. Busca os selos
+        const [[fidelidade]] = await db.query(
+            'SELECT selos_atuais FROM fidelidade WHERE user_id = ?', 
+            [userId]
+        );
+        // 2. Busca os cupons disponíveis
+        const [cupons] = await db.query(
+            'SELECT * FROM user_cupons WHERE user_id = ? AND usado = FALSE ORDER BY criado_em DESC',
+            [userId]
+        );
+
         if (userRows.length === 0) {
             return res.redirect('/logout');
         }
@@ -1789,6 +1800,8 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
             user: userRows[0],
             enderecos: enderecos,
             favoritos: favoritos,
+            selos_atuais: fidelidade ? fidelidade.selos_atuais : 0,
+            cupons: cupons,
             messages: res.locals.getMessages() 
         });
 

@@ -1607,3 +1607,113 @@ body.dark-mode .btn-outline:hover {
     background-color: var(--color-blue-dark); /* Fundo claro */
     color: var(--color-white); /* Texto escuro */
 }
+
+
+/* ====================================================== */
+/* --- FIDELIDADE E CUPONS --- */
+/* ====================================================== */
+
+/* Container dos Selos */
+.fidelidade-card-container {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 colunas */
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+/* Cada selo individual */
+.fidelidade-stamp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    font-size: 2.5rem;
+    color: #ccc; /* Cor do selo vazio */
+    border: 2px dashed #eee;
+    border-radius: 8px;
+    transition: var(--theme-transition);
+}
+
+.fidelidade-stamp span {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-text);
+}
+
+/* Selo preenchido */
+.fidelidade-stamp.filled {
+    color: var(--color-orange-vibrant);
+    border-color: rgba(255, 159, 28, 0.3);
+    background-color: rgba(255, 159, 28, 0.05);
+}
+.fidelidade-stamp.filled i {
+    transform: rotate(-15deg); /* Efeito de carimbado */
+}
+
+/* Texto de informação abaixo dos selos */
+.fidelidade-info {
+    padding: 0 2rem 1.5rem 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--admin-text-secondary);
+}
+
+/* Lista de Cupons */
+.cupom-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.cupom-item {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #eee;
+}
+.cupom-item:last-child { border-bottom: none; }
+
+.cupom-icon {
+    font-size: 2rem;
+    color: #27ae60; /* Verde */
+}
+
+.cupom-info h4 {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-blue-dark);
+    margin-bottom: 0.25rem;
+}
+.cupom-info p {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    margin: 0;
+}
+
+/* Dark Mode para Fidelidade e Cupons */
+body.dark-mode .fidelidade-stamp {
+    color: #4B5563; /* Cor do selo vazio */
+    border-color: #374151;
+}
+body.dark-mode .fidelidade-stamp span {
+    color: var(--color-text);
+}
+body.dark-mode .fidelidade-stamp.filled {
+    border-color: rgba(255, 159, 28, 0.2);
+    background-color: rgba(255, 159, 28, 0.1);
+}
+body.dark-mode .fidelidade-info {
+    color: var(--admin-text-secondary);
+}
+body.dark-mode .cupom-item {
+    border-bottom-color: #2a3b52;
+}
+body.dark-mode .cupom-info h4 {
+    color: var(--color-blue-dark);
+}
+body.dark-mode .cupom-info p {
+    color: var(--color-text);
+}

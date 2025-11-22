@@ -6,6 +6,7 @@ const { enviarEmailStatusPedido } = require('../frontend/js/enviarEmail');
 const { produtosAdminRouter } = require('./produtos-admin');
 const { Parser } = require('json2csv');
 const puppeteer = require('puppeteer');
+const crypto = require('crypto');
 
 function requireAdminLogin(req, res, next) {
   if (!(req.session && req.session.isAdmin)) {
@@ -25,7 +26,7 @@ function requireAdminPin(req, res, next) {
 }
 
 // ======================================================
-// ROTAS: RELATÓRIOS (US Implementada) ---
+// --- NOVAS ROTAS: RELATÓRIOS ---
 // ======================================================
 
 /**
@@ -62,6 +63,74 @@ function getReportDateFilter(periodoQuery) {
             break;
     }
     return { whereClause, params };
+}
+
+async function adicionarSeloFidelidade(pedido_id) {
+    const connection = await db.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // 1. Obter o user_id do pedido
+        const [[pedido]] = await connection.query(
+            'SELECT user_id FROM pedidos WHERE id = ?',
+            [pedido_id]
+        );
+        
+        if (!pedido) throw new Error('Pedido não encontrado para adicionar selo.');
+        
+        const user_id = pedido.user_id;
+
+        // 2. Verificar se já existe um registro de fidelidade (e travar a linha)
+        const [[fidelidade]] = await connection.query(
+            'SELECT id, selos_atuais FROM fidelidade WHERE user_id = ? FOR UPDATE',
+            [user_id]
+        );
+
+        let selosNovos = 1;
+        
+        if (fidelidade) {
+            // 3. Se existe, incrementa
+            selosNovos = fidelidade.selos_atuais + 1;
+            await connection.query(
+                'UPDATE fidelidade SET selos_atuais = ? WHERE id = ?',
+                [selosNovos, fidelidade.id]
+            );
+        } else {
+            // 4. Se não existe, cria o registro
+            await connection.query(
+                'INSERT INTO fidelidade (user_id, selos_atuais) VALUES (?, 1)',
+                [user_id]
+            );
+        }
+
+        // 5. Verifica se atingiu a recompensa (10 selos)
+        if (selosNovos >= 10) {
+            // Gera um cupom de 10%
+            const codigoCupom = `FIDELIDADE10-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+            
+            await connection.query(
+                `INSERT INTO user_cupons (user_id, codigo, tipo, valor, descricao) 
+                 VALUES (?, ?, 'percentual', 10.00, 'Cupom de 10% OFF por Fidelidade')`,
+                [user_id, codigoCupom]
+            );
+
+            // Zera os selos
+            await connection.query(
+                'UPDATE fidelidade SET selos_atuais = 0 WHERE user_id = ?',
+                [user_id]
+            );
+            console.log(`[FIDELIDADE] Cupom ${codigoCupom} gerado e selos zerados para user ${user_id}.`);
+        } else {
+             console.log(`[FIDELIDADE] Selo ${selosNovos}/10 adicionado para user ${user_id}.`);
+        }
+        
+        await connection.commit();
+    } catch (error) {
+        await connection.rollback();
+        console.error(`[ERRO FIDELIDADE] Falha ao adicionar selo para pedido ${pedido_id}:`, error);
+    } finally {
+        if (connection) connection.release();
+    }
 }
 
 // Rota principal para EXIBIR os relatórios (AC1, AC2, AC3)
@@ -162,19 +231,19 @@ router.get('/relatorios/exportar/pdf', requireAdminPin, async (req, res) => {
             try {
                 // 3. Inicia o Puppeteer
                 browser = await puppeteer.launch({
-                    headless: 'new', 
-                    args: ['--no-sandbox', '--disable-setuid-sandbox'] 
+                    headless: 'new',
+                    args: ['--no-sandbox', '--disable-setuid-sandbox']
                 });
                 
                 const page = await browser.newPage();
                 
-                // 4. Define o conteúdo da página
+                // 4. Define o conteúdo da página como o HTML renderizado
                 await page.setContent(html, { waitUntil: 'networkidle0' });
                 
                 // 5. Gera o PDF
                 const pdfBuffer = await page.pdf({
                     format: 'A4',
-                    printBackground: true, 
+                    printBackground: true,
                     margin: {
                         top: '20px',
                         right: '20px',
@@ -243,7 +312,7 @@ router.get('/relatorios/exportar/csv', requireAdminPin, async (req, res) => {
 
         const numRows = Math.max(resumoArray.length, maisVendidosQtd.length, maisVendidosValorFormatado.length, 10);
 
-        // 3. Mescla os dados em um único array 
+        // 3. Mescla os dados em um único array
         for (let i = 0; i < numRows; i++) {
             const row = {};
 
@@ -476,7 +545,7 @@ router.get('/pedidos/:id', requireAdminPin, async (req, res) => {
 router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
      const pedidoId = req.params.id;
      const { status: novoStatus, codigo_rastreamento } = req.body;
-     const connection = await db.getConnection(); // Usar conexão para garantir consistência
+     const connection = await db.getConnection(); 
  
      try {
          await connection.beginTransaction();
@@ -486,7 +555,7 @@ router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
              `SELECT p.status, u.email, u.nome
               FROM pedidos p
               JOIN users u ON p.user_id = u.id
-              WHERE p.id = ? FOR UPDATE`, // Lock para evitar condição de corrida
+              WHERE p.id = ? FOR UPDATE`,
              [pedidoId]
          );
  
@@ -494,7 +563,10 @@ router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
              await connection.rollback();
              return res.redirect('/admin/pedidos?message=Erro: Pedido não encontrado.');
          }
- 
+         
+         // Salva o status antigo
+         const oldStatus = pedidoAtual.status;
+
          // Se o status não for 'enviado', limpa o código de rastreio
          const codigoFinal = (novoStatus === 'enviado') ? codigo_rastreamento : null;
  
@@ -508,14 +580,20 @@ router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
  
          await connection.commit(); // Confirma a atualização no banco
  
-         // 3. Envia o e-mail APÓS confirmar a atualização, SE o status mudou
-         if (pedidoAtual.status !== novoStatus) {
-             // Chama a função de envio de e-mail
+         // 3. Verifica se o status mudou para "entregue"
+         if (novoStatus === 'entregue' && oldStatus !== 'entregue') {
+             console.log(`[GATILHO FIDELIDADE] Pedido ${pedidoId} marcado como 'entregue'. Adicionando selo...`);
+             // Chama a função helper (não precisa de await, pode rodar em "fundo")
+             adicionarSeloFidelidade(pedidoId);
+         }
+
+         // 4. Envia o e-mail APÓS confirmar a atualização, SE o status mudou
+         if (oldStatus !== novoStatus) {
              await enviarEmailStatusPedido(
-                 { id: pedidoId }, // Objeto pedido (só precisamos do id aqui)
-                 { email: pedidoAtual.email, nome: pedidoAtual.nome }, // Objeto cliente
-                 novoStatus, // O novo status que foi definido
-                 codigoFinal // O código de rastreio (pode ser null)
+                 { id: pedidoId }, 
+                 { email: pedidoAtual.email, nome: pedidoAtual.nome }, 
+                 novoStatus, 
+                 codigoFinal 
              );
          } else {
              console.log(`[INFO] Status do pedido ${pedidoId} não alterado. E-mail não enviado.`);
@@ -524,12 +602,11 @@ router.post('/pedidos/:id', requireAdminPin, async (req, res) => {
          res.redirect('/admin/pedidos?message=Pedido atualizado com sucesso!');
  
      } catch (error) {
-         await connection.rollback(); // Desfaz a transação em caso de erro
+         await connection.rollback(); 
          console.error(`Erro ao atualizar pedido ${pedidoId}:`, error);
-         // Redireciona de volta para a página de detalhes com uma mensagem de erro
          res.redirect(`/admin/pedidos/${pedidoId}?error=true&message=Erro ao atualizar pedido.`);
      } finally {
-         if (connection) connection.release(); // Libera a conexão
+         if (connection) connection.release(); 
      }
  });
 

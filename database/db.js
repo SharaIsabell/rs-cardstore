@@ -102,6 +102,18 @@ async function main() {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS user_cupons (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      codigo VARCHAR(50) NOT NULL UNIQUE,
+      tipo ENUM('percentual', 'fixo') NOT NULL,
+      valor DECIMAL(10, 2) NOT NULL,
+      descricao VARCHAR(255),
+      usado BOOLEAN DEFAULT FALSE,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS notas_fiscais (
       id INT AUTO_INCREMENT PRIMARY KEY,
       pedido_id INT,
@@ -188,6 +200,16 @@ async function main() {
     if (e.code !== 'ER_DUP_FIELDNAME') console.warn('[users] last_verification_sent_at:', e.message);
   }
 
+  try {
+    await connection.query(
+      "ALTER TABLE fidelidade CHANGE COLUMN compras_concluidas selos_atuais INT DEFAULT 0;"
+    );
+  } catch (e) {
+    // Ignora o erro se a coluna antiga não existir ou a nova já existir
+    if (e.code !== 'ER_NO_SUCH_FIELD' && e.code !== 'ER_DUP_FIELDNAME' && e.code !== 'ER_BAD_FIELD_ERROR') {
+         console.warn('[fidelidade] Aviso ao renomear coluna:', e.message);
+    }
+  }
 
   // --- ALTERAÇÕES NA TABELA PAGAMENTOS ---
   try {
