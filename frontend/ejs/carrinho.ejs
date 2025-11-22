@@ -65,6 +65,24 @@
                         <strong id="summary-subtotal">R$ <%= cart.subtotal.toFixed(2).replace('.', ',') %></strong>
                     </div>
 
+                    <div class="coupon-area">
+                        <h3>Tem um Cupom de Desconto?</h3>
+                        <div class="coupon-input-group">
+                            <input type="text" id="coupon-code-input" 
+                                   placeholder="Insira o código" 
+                                   value="<%= cart.cupom ? cart.cupom.codigo : '' %>"
+                                   <%= cart.cupom ? 'disabled' : '' %>>
+                            <button id="apply-coupon-btn" class="cta-button-small" <%= cart.cupom ? 'disabled' : '' %>>
+                                <%= cart.cupom ? 'Aplicado' : 'Aplicar' %>
+                            </button>
+                        </div>
+                        <div id="coupon-message" class="coupon-message <%= cart.desconto > 0 ? 'success' : '' %>">
+                            <% if (cart.desconto > 0) { %>
+                                Cupom <%= cart.cupom.codigo %> aplicado!
+                            <% } %>
+                        </div>
+                    </div>
+
                     <div class="shipping-calculator">
                         <h3>Endereço de Entrega</h3>
                         <div id="address-options">
@@ -91,24 +109,6 @@
                         
                         <div id="shipping-error" class="error-message"></div>
                         <div id="shipping-options-container"></div>
-                    </div>
-
-                    <div class="coupon-area">
-                        <h3>Cupom de Desconto</h3>
-                        <div class="coupon-input-group">
-                            <input type="text" id="coupon-code-input" 
-                                   placeholder="Insira o código" 
-                                   value="<%= cart.cupom ? cart.cupom.codigo : '' %>"
-                                   <%= cart.cupom ? 'disabled' : '' %>>
-                            <button id="apply-coupon-btn" class="cta-button-small" <%= cart.cupom ? 'disabled' : '' %>>
-                                <%= cart.cupom ? 'Aplicado' : 'Aplicar' %>
-                            </button>
-                        </div>
-                        <div id="coupon-message" class="coupon-message <%= cart.desconto > 0 ? 'success' : '' %>">
-                            <% if (cart.desconto > 0) { %>
-                                Cupom <%= cart.cupom.codigo %> aplicado!
-                            <% } %>
-                        </div>
                     </div>
                     
                     <div class="summary-row">

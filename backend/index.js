@@ -732,10 +732,33 @@ router.get('/checkout', async (req, res) => {
         const frete = req.session.frete.cost;
         const frete_metodo = req.session.frete.name;
         const endereco_entrega = req.session.endereco_entrega;
-        const total = subtotal + frete;
+        const cupomAplicado = req.session.cupomAplicado || null;
+        let valorDesconto = 0;
+
+        if (cupomAplicado) {
+            if (cupomAplicado.tipo === 'percentual') {
+                valorDesconto = subtotal * (cupomAplicado.valor / 100);
+            } else { // 'fixo'
+                valorDesconto = cupomAplicado.valor;
+            }
+            // Garante que o desconto não ultrapasse o subtotal
+            valorDesconto = Math.min(valorDesconto, subtotal);
+        }
+        
+        // O total final deve ser: (subtotal - desconto) + frete
+        const totalComDesconto = subtotal - valorDesconto;
+        const total = totalComDesconto + frete;
 
         res.render('checkout', {
-            cart: { items, subtotal, frete, frete_metodo, total },
+            cart: { 
+                items, 
+                subtotal, 
+                frete, 
+                frete_metodo, 
+                desconto: valorDesconto, 
+                cupom: cupomAplicado,   
+                total                    
+            },
             user: user,
             endereco: endereco_entrega,
             message: null
@@ -978,7 +1001,7 @@ router.post('/process_payment_bypass', async (req, res) => {
     }
 });
 
-async function createOrder(connection, user_id, total, items, status, frete_info, endereco) {
+async function createOrder(connection, user_id, total, items, status, frete_info, endereco, cupom_id) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
 
     // A lógica de salvar o endereço na tabela 'users' foi REMOVIDA

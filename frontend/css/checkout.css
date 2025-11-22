@@ -572,3 +572,13 @@ body.dark-mode .modal-footer .cta-button.outline {
 body.dark-mode .modal-close {
     color: #d0d0d0;
 }
+
+/* Estilo para a nova linha de desconto no resumo */
+.summary-row.discount-row {
+    color: #28a745;
+    font-weight: 700;
+}
+
+.summary-row.discount-row .discount-value {
+    color: #28a745;
+}

@@ -56,6 +56,13 @@
             <strong>R$ <%= cart.frete.toFixed(2) %></strong>
           </div>
 
+          <% if (cart.desconto > 0) { %>
+           <div class="summary-row discount-row">
+              <span>Desconto (<%= cart.cupom.codigo %>)</span>
+              <strong class="discount-value">- R$ <%= cart.desconto.toFixed(2) %></strong>
+          </div>
+          <% } %>
+
           <div class="summary-total">
             <span>Total</span>
             <strong id="summary-total" data-total="<%= cart.total.toFixed(2) %>">
