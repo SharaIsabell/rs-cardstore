@@ -62,7 +62,7 @@
                     <h2>Resumo do Pedido</h2>
                     <div class="summary-row">
                         <span>Subtotal</span>
-                        <strong id="summary-subtotal">R$ <%= cart.total.toFixed(2) %></strong>
+                        <strong id="summary-subtotal">R$ <%= cart.subtotal.toFixed(2).replace('.', ',') %></strong>
                     </div>
 
                     <div class="shipping-calculator">
@@ -92,14 +92,40 @@
                         <div id="shipping-error" class="error-message"></div>
                         <div id="shipping-options-container"></div>
                     </div>
+
+                    <div class="coupon-area">
+                        <h3>Cupom de Desconto</h3>
+                        <div class="coupon-input-group">
+                            <input type="text" id="coupon-code-input" 
+                                   placeholder="Insira o código" 
+                                   value="<%= cart.cupom ? cart.cupom.codigo : '' %>"
+                                   <%= cart.cupom ? 'disabled' : '' %>>
+                            <button id="apply-coupon-btn" class="cta-button-small" <%= cart.cupom ? 'disabled' : '' %>>
+                                <%= cart.cupom ? 'Aplicado' : 'Aplicar' %>
+                            </button>
+                        </div>
+                        <div id="coupon-message" class="coupon-message <%= cart.desconto > 0 ? 'success' : '' %>">
+                            <% if (cart.desconto > 0) { %>
+                                Cupom <%= cart.cupom.codigo %> aplicado!
+                            <% } %>
+                        </div>
+                    </div>
                     
                     <div class="summary-row">
                         <span>Frete</span>
                         <strong id="summary-shipping">R$ 0.00</strong>
                     </div>
+
+                    <% if (cart.desconto > 0) { %>
+                    <div class="summary-row discount-row">
+                        <span>Desconto (<%= cart.cupom.codigo %>)</span>
+                        <strong id="summary-discount" class="discount-value">- R$ <%= cart.desconto.toFixed(2).replace('.', ',') %></strong>
+                    </div>
+                    <% } %>
+
                     <div class="summary-total">
                         <span>Total</span>
-                        <strong id="summary-total" data-subtotal="<%= cart.total.toFixed(2) %>">R$ <%= cart.total.toFixed(2) %></strong>
+                        <strong id="summary-total" data-subtotal="<%= cart.total.toFixed(2) %>">R$ <%= cart.total.toFixed(2).replace('.', ',') %></strong>
                     </div>
                     <a href="/checkout" class="cta-button checkout-btn disabled">Finalizar Compra</a>
                 </div>

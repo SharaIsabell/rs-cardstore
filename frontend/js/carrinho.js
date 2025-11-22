@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         cepInput.value = '';
         Object.values(addressFields).forEach(field => {
             field.value = '';
+            // Garante que os campos voltem a ser editáveis
             if(field.hasAttribute('readonly')) {
                 field.readOnly = false;
             }
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         checkoutBtn.classList.add('disabled');
     };
 
+    // Botão "Usar Endereço Cadastrado"
     if(useRegisteredBtn) {
         useRegisteredBtn.addEventListener('click', async () => {
             clearAddressForm();
@@ -92,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
                 
+                // Função para preencher e bloquear/desbloquear campos
                 const preencherCampo = (campo, valor) => {
                     campo.value = valor || '';
                 };
@@ -101,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 preencherCampo(addressFields.cidade, data.localidade);
                 preencherCampo(addressFields.estado, data.uf);
 
-                addressFields.numero.focus();
+                addressFields.numero.focus(); // Foca no campo de número
             } catch (error) {
                 shippingError.textContent = 'Erro ao consultar o CEP.';
             }
@@ -187,17 +190,76 @@ document.addEventListener('DOMContentLoaded', () => {
         updateTotalsAndSave();
     }
 
+    const couponInput = document.getElementById('coupon-code-input');
+    const applyCouponBtn = document.getElementById('apply-coupon-btn');
+    const couponMessage = document.getElementById('coupon-message');
+
+    if (applyCouponBtn && couponInput) {
+        applyCouponBtn.addEventListener('click', async () => {
+            const codigo = couponInput.value.trim().toUpperCase();
+            
+            if (!codigo) {
+                couponMessage.textContent = 'Insira um código.';
+                couponMessage.classList.remove('success');
+                return;
+            }
+
+            couponMessage.textContent = 'Aplicando...';
+            applyCouponBtn.disabled = true;
+
+            try {
+                const response = await fetch('/carrinho/aplicar-cupom', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ codigo })
+                });
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    couponMessage.textContent = data.message || 'Erro ao aplicar cupom.';
+                    couponMessage.classList.remove('success');
+                    couponInput.disabled = false;
+                    applyCouponBtn.disabled = false;
+                    applyCouponBtn.textContent = 'Aplicar';
+                } else {
+                    // Sucesso! Recarrega a página para que o EJS recalcule o resumo
+                    window.location.reload(); 
+                }
+
+            } catch (error) {
+                console.error("Erro na comunicação para aplicar cupom:", error);
+                couponMessage.textContent = 'Erro de comunicação com o servidor.';
+                couponMessage.classList.remove('success');
+                applyCouponBtn.disabled = false;
+                applyCouponBtn.textContent = 'Aplicar';
+            }
+        });
+    }
+
     async function updateTotalsAndSave() {
         const selectedShipping = document.querySelector('input[name="shipping-option"]:checked');
         if (!selectedShipping) return;
 
-        // Atualiza resumo na tela
+        // Custo do frete
         const shippingCost = parseFloat(selectedShipping.value);
-        const subtotalElement = document.getElementById('summary-total');
-        const subtotal = parseFloat(subtotalElement.getAttribute('data-subtotal'));
-        const total = subtotal + shippingCost;
-        document.getElementById('summary-shipping').textContent = `R$ ${shippingCost.toFixed(2)}`;
-        subtotalElement.textContent = `R$ ${total.toFixed(2)}`;
+        
+        // Valor base do carrinho 
+        // Este é o valor que precisa do Frete adicionado.
+        const baseTotalComDesconto = parseFloat(
+            document.getElementById('summary-total').getAttribute('data-subtotal')
+        ); 
+
+        // Cálculo do total final
+        const totalFinal = baseTotalComDesconto + shippingCost;
+
+        //ATUALIZAÇÃO DA INTERFACE (Corrigido o formato de exibição)
+        
+        // Define o valor do Frete
+        document.getElementById('summary-shipping').textContent = `R$ ${shippingCost.toFixed(2).replace('.', ',')}`;
+        
+        // Define o valor Total
+        document.getElementById('summary-total').textContent = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
 
         // Coleta dados do frete e do endereço
         const shippingInfo = {

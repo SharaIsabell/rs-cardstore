@@ -31,15 +31,16 @@ router.use(session({
 router.use((req, res, next) => {
     res.locals.session = req.session;
     res.locals.mercadoPagoPublicKey = process.env.MERCADOPAGO_PUBLIC_KEY;
+    // Adiciona uma função helper para mensagens flash
     res.locals.getMessages = () => {
         const messages = req.session.messages || {};
-        req.session.messages = {};
+        req.session.messages = {}; 
         return messages;
     };
     next();
 });
 
-// --- NOVO MIDDLEWARE: Proteção de Rotas ---
+// --- Proteção de Rotas ---
 const isAuthenticated = (req, res, next) => {
     if (req.session.userId) {
         return next();
@@ -57,7 +58,7 @@ router.use((req, res, next) => {
     next();
 });
 
-// --- Gerar NF Fictícia (AC2) ---
+// --- Gerar NF Fictícia ---
 async function gerarNotaFiscalFicticia(connection, pedido_id) {
     try {
         // Gera um link fictício único
@@ -73,13 +74,13 @@ async function gerarNotaFiscalFicticia(connection, pedido_id) {
     }
 }
 
-// --- Enviar E-mail de Confirmação (AC1, AC3, DoD1, DoD3) ---
+// --- Enviar E-mail de Confirmação ---
 async function enviarConfirmacaoEGerarNF(connection, pedido_id) {
     try {
-        // 1. Gerar Nota Fiscal (AC2)
+        // Gerar Nota Fiscal 
         const linkNF = await gerarNotaFiscalFicticia(connection, pedido_id);
 
-        // 2. Buscar dados completos para o e-mail
+        // Buscar dados completos para o e-mail
         const [[pedido]] = await connection.query(
             `SELECT p.*, u.email, u.nome 
        FROM pedidos p 
@@ -100,7 +101,7 @@ async function enviarConfirmacaoEGerarNF(connection, pedido_id) {
             throw new Error('Pedido não encontrado para envio de e-mail.');
         }
 
-        // 3. Enviar e-mail de confirmação (AC1, AC3, DoD3)
+        // Enviar e-mail de confirmação 
         // (Assumindo que a função enviarEmailConfirmacaoPedido existe no módulo importado)
         await enviarEmailConfirmacaoPedido(pedido, itens, linkNF);
 
@@ -122,7 +123,7 @@ router.get('/', async (req, res) => {
             const [favRows] = await db.query('SELECT produto_id FROM user_favoritos WHERE user_id = ?', [userId]);
             favoritosSet = new Set(favRows.map(f => f.produto_id));
         }
-        
+
         const [novosProdutos] = await db.query(
             `SELECT id, nome, preco, desconto_percentual, imagem_url, novo, promocao
          FROM produtos
@@ -182,7 +183,7 @@ async function renderProductPage(req, res, viewName, category, baseUrl, searchTe
 
         if (searchTerm) {
             // A lógica de busca no back-end pesquisa por nome e descrição
-            whereClause = 'WHERE (nome LIKE ? OR descricao LIKE ?)';
+            whereConditions.push('(nome LIKE ? OR descricao LIKE ?)');
             queryParams.push(`%${searchTerm}%`, `%${searchTerm}%`);
         } else if (category) {
             whereConditions.push('categoria = ?');
@@ -757,6 +758,9 @@ router.post('/process_payment', async (req, res) => {
     const endereco_entrega = req.session.endereco_entrega;
     const connection = await db.getConnection();
 
+    const cupomAplicado = req.session.cupomAplicado || null;
+    const cupomId = cupomAplicado ? cupomAplicado.id : null;
+
     try {
         await connection.beginTransaction();
 
@@ -790,7 +794,7 @@ router.post('/process_payment', async (req, res) => {
         const idempotencyKey = uuidv4();
 
         if (payment_method === 'card' || payment_method === 'pix') {
-            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete_info, endereco_entrega);
+            const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete_info, endereco_entrega, cupomId);
             if (payment_method === 'card') {
                 const { token, issuer_id, payment_method_id, installments, email, identificationType, identificationNumber } = req.body;
                 const card_payment_data = {
@@ -839,6 +843,7 @@ router.post('/process_payment', async (req, res) => {
 
             } else { // PIX
                 const { email } = req.body;
+                const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pendente', frete_info, endereco_entrega, cupomId);
                 const pix_payment_data = {
                     transaction_amount: parseFloat(transaction_amount.toFixed(2)), description: `Pedido #${pedido_id}`, payment_method_id: 'pix',
                     payer: { email, first_name: req.session.userName },
@@ -848,6 +853,9 @@ router.post('/process_payment', async (req, res) => {
 
                 delete req.session.frete;
                 delete req.session.endereco_entrega;
+                if (req.session.cupomAplicado) {
+                    delete req.session.cupomAplicado;
+                }
                 await connection.commit();
 
                 return res.status(201).json({
@@ -882,6 +890,8 @@ router.post('/process_payment_bypass', async (req, res) => {
     const frete_info = req.session.frete;
     const endereco_entrega = req.session.endereco_entrega;
     const connection = await db.getConnection();
+    const cupomAplicado = req.session.cupomAplicado || null;
+    const cupomId = cupomAplicado ? cupomAplicado.id : null;
 
     try {
         await connection.beginTransaction();
@@ -917,9 +927,8 @@ router.post('/process_payment_bypass', async (req, res) => {
         const transaction_amount = subtotal + frete_info.cost;
 
         // 5. Criar Pedido (Simulação)
-        // --- MODIFICAÇÃO ---
         // Passamos o objeto frete_info completo
-        const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete_info, endereco_entrega);
+        const pedido_id = await createOrder(connection, user_id, transaction_amount, items, 'pago', frete_info, endereco_entrega, cupomId);
 
         // Criamos um registro de pagamento fictício aprovado
         await createPaymentRecord(connection, pedido_id, 'credito', 'aprovado', 'TEST_BYPASS_PAYMENT');
@@ -950,6 +959,9 @@ router.post('/process_payment_bypass', async (req, res) => {
         // 9. Limpar sessão
         delete req.session.frete;
         delete req.session.endereco_entrega;
+        if (req.session.cupomAplicado) {
+            delete req.session.cupomAplicado;
+        }
 
         // 10. Commit
         await connection.commit();
@@ -966,7 +978,6 @@ router.post('/process_payment_bypass', async (req, res) => {
     }
 });
 
-// --- ROTA MODIFICADA: createOrder ---
 async function createOrder(connection, user_id, total, items, status, frete_info, endereco) {
     const { cep, rua, numero, complemento, bairro, cidade, estado } = endereco;
 
@@ -995,6 +1006,15 @@ async function createOrder(connection, user_id, total, items, status, frete_info
         'INSERT INTO pedido_itens (pedido_id, produto_id, quantidade, preco_unitario) VALUES ?',
         [pedidoItensData]
     );
+
+    if (cupom_id) {
+        await connection.query(
+            'UPDATE user_cupons SET usado = TRUE WHERE id = ?',
+            [cupom_id]
+        );
+        console.log(`[CUPOM] Cupom ${cupom_id} marcado como usado.`);
+    }
+
     return pedido_id;
 }
 
@@ -1063,7 +1083,30 @@ router.get('/carrinho', async (req, res) => {
             const precoFinal = item.preco * (1 - item.desconto_percentual / 100);
             return acc + (precoFinal * item.quantidade);
         }, 0);
-        res.render('carrinho', { cart: { items, total } });
+
+        const cupomAplicado = req.session.cupomAplicado || null;
+        let totalComDesconto = total;
+        let valorDesconto = 0;
+
+        if (cupomAplicado) {
+            if (cupomAplicado.tipo === 'percentual') {
+                valorDesconto = total * (cupomAplicado.valor / 100);
+            } else { // 'fixo'
+                valorDesconto = cupomAplicado.valor;
+            }
+            // Garante que o total não seja negativo
+            totalComDesconto = Math.max(0, total - valorDesconto); 
+        }
+
+        res.render('carrinho', { 
+            cart: { 
+                items, 
+                subtotal: total, // Renomeado total para subtotal (sem desconto)
+                total: totalComDesconto,
+                desconto: valorDesconto,
+                cupom: cupomAplicado
+            } 
+        });
     } catch (error) {
         console.error('Erro ao buscar carrinho:', error);
         res.status(500).send('Erro ao carregar o carrinho.');
@@ -1211,6 +1254,53 @@ router.post('/carrinho/salvar-frete-e-endereco', (req, res) => {
     req.session.endereco_entrega = address;
 
     res.json({ success: true, message: 'Dados de entrega salvos na sessão.' });
+});
+
+router.post('/carrinho/aplicar-cupom', isAuthenticated, async (req, res) => {
+    const { codigo } = req.body;
+    const user_id = req.session.userId;
+
+    // Limpa qualquer cupom antigo da sessão
+    delete req.session.cupomAplicado;
+    
+    if (!codigo) {
+        return res.json({ success: false, message: 'Código do cupom não pode ser vazio.' });
+    }
+
+    try {
+        // Busca o cupom
+        const [cupons] = await db.query(
+            'SELECT * FROM user_cupons WHERE user_id = ? AND codigo = ? AND usado = FALSE',
+            [user_id, codigo]
+        );
+
+        if (cupons.length === 0) {
+            return res.status(404).json({ success: false, message: 'Cupom inválido, expirado ou já utilizado.' });
+        }
+
+        const cupom = cupons[0];
+
+        // Salva os dados do cupom na sessão
+        req.session.cupomAplicado = {
+            id: cupom.id,
+            codigo: cupom.codigo,
+            tipo: cupom.tipo,
+            valor: cupom.valor
+        };
+
+        // Retorna sucesso e os dados do cupom
+        const valorFormatado = cupom.tipo === 'percentual' ? `${cupom.valor}% OFF` : `R$ ${cupom.valor.toFixed(2)}`;
+        
+        return res.json({ 
+            success: true, 
+            message: `Cupom aplicado! ${valorFormatado}`, 
+            cupom: req.session.cupomAplicado 
+        });
+
+    } catch (error) {
+        console.error('Erro ao aplicar cupom:', error);
+        return res.status(500).json({ success: false, message: 'Erro no servidor ao aplicar cupom.' });
+    }
 });
 
 // --- Para o frontend verificar o status do pedido ---
@@ -1755,7 +1845,9 @@ router.post('/resend-verification', async (req, res) => {
     }
 });
 
-// --- NOVAS ROTAS: MINHA CONTA / PERFIL ---
+// ======================================================
+// --- MINHA CONTA / PERFIL ---
+// ======================================================
 
 // 1. GET: Exibe a página "Minha Conta"
 router.get('/minha-conta', isAuthenticated, async (req, res) => {
@@ -1768,10 +1860,8 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
         );
         const [enderecos] = await db.query(
             'SELECT * FROM user_enderecos WHERE user_id = ? ORDER BY is_principal DESC, id ASC',
-             [userId]
+            [userId]
         );
-
-        // Busca os produtos favoritos fazendo JOIN com a tabela de produtos
         const [favoritos] = await db.query(
             `SELECT p.id, p.nome, p.preco, p.desconto_percentual, p.imagem_url, p.categoria, p.estoque 
              FROM user_favoritos uf
@@ -1800,8 +1890,8 @@ router.get('/minha-conta', isAuthenticated, async (req, res) => {
             user: userRows[0],
             enderecos: enderecos,
             favoritos: favoritos,
-            selos_atuais: fidelidade ? fidelidade.selos_atuais : 0,
-            cupons: cupons,
+            selos_atuais: fidelidade ? fidelidade.selos_atuais : 0, // NOVO
+            cupons: cupons, // NOVO
             messages: res.locals.getMessages() 
         });
 
