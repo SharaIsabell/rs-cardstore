@@ -1420,71 +1420,89 @@ router.get('/meus-pedidos', async (req, res) => {
 router.post('/pedido/cancelar/:id', isAuthenticated, async (req, res) => {
     const pedido_id = req.params.id;
     const user_id = req.session.userId;
+    
+    // Obtém uma conexão exclusiva para esta transação
     const connection = await db.getConnection();
 
     try {
+        console.log(`[TRANSAÇÃO] Iniciando cancelamento do pedido #${pedido_id}...`);
+        
+        // 1. INÍCIO DA TRANSAÇÃO (ACID - Atomicidade)
         await connection.beginTransaction();
 
-        // Buscar o pedido e o ID do pagamento (FOR UPDATE trava a linha)
+        // 2. BUSCA E BLOQUEIO (ACID - Isolamento)
+        // O 'FOR UPDATE' impede que outro processo mexa nesse pedido ao mesmo tempo
         const [[pedidoInfo]] = await connection.query(
-            `SELECT 
-                p.status, 
-                pag.mp_payment_id 
+            `SELECT p.status, p.id 
              FROM pedidos p
-             LEFT JOIN pagamentos pag ON p.id = pag.pedido_id
              WHERE p.id = ? AND p.user_id = ?
              FOR UPDATE`,
             [pedido_id, user_id]
         );
 
-        // Validar
+        // Validações
         if (!pedidoInfo) {
             throw new Error('Pedido não encontrado ou não pertence ao usuário.');
         }
 
-        // Só pode cancelar se estiver 'pago'
         if (pedidoInfo.status !== 'pago') {
-            req.session.messages = { error: 'Este pedido não pode ser cancelado (status: ' + pedidoInfo.status + ').' };
-            await connection.rollback(); // Libera o lock
-            return res.redirect('/meus-pedidos');
+            throw new Error(`Pedido não pode ser cancelado. Status atual: ${pedidoInfo.status}`);
         }
 
-        // Iniciar Estorno
-        console.log(`[CANCELAR-BYPASS] Estorno simulado para Pedido ${pedido_id}. Nenhum contato com o gateway de pagamento.`);
-
-        // Retornar Itens ao Estoque
+        // 3. DEVOLUÇÃO AO ESTOQUE 
         const [itens] = await connection.query(
             'SELECT produto_id, quantidade FROM pedido_itens WHERE pedido_id = ?',
             [pedido_id]
         );
 
         for (const item of itens) {
-            await connection.query(
+            // Atualiza e verifica se o produto realmente existia para ser atualizado
+            const [resultEstoque] = await connection.query(
                 'UPDATE produtos SET estoque = estoque + ? WHERE id = ?',
                 [item.quantidade, item.produto_id]
             );
+            
+            // Segurança extra: Se o produto foi deletado do banco, isso detecta
+            if (resultEstoque.affectedRows === 0) {
+                console.warn(`[AVISO] Produto ID ${item.produto_id} não encontrado ao devolver estoque.`);
+                // Opcional: throw new Error("Erro de integridade de dados");
+            }
         }
-        console.log(`[CANCELAR] Estoque do pedido ${pedido_id} retornado.`);
+        console.log(`[ESTOQUE] Itens do pedido ${pedido_id} devolvidos.`);
 
-
-        // Atualizar Status do Pedido 
-        await connection.query(
+        // 4. ATUALIZAÇÃO DO STATUS 
+        const [resultStatus] = await connection.query(
             "UPDATE pedidos SET status = 'cancelado' WHERE id = ?",
             [pedido_id]
         );
 
-        // Commit
+        if (resultStatus.affectedRows === 0) {
+            throw new Error('Falha ao atualizar o status do pedido no banco.');
+        }
+
+        // 5. CONFIRMAÇÃO (COMMIT)
+        // Se chegou até aqui, nada falhou. Salva tudo.
         await connection.commit();
+        console.log(`[SUCESSO] Transação de cancelamento finalizada (COMMIT) para pedido ${pedido_id}.`);
         
-        req.session.messages = { success: 'Pedido cancelado com sucesso!' };
+        req.session.messages = { success: 'Pedido cancelado e estorno solicitado com sucesso!' };
         res.redirect('/meus-pedidos');
 
     } catch (error) {
-        await connection.rollback();
-        console.error(`[ERRO CANCELAR] Falha ao cancelar pedido ${pedido_id}:`, error.message);
-        req.session.messages = { error: `Não foi possível cancelar o pedido: ${error.message}` };
+        // 6. REVERSÃO (ROLLBACK)
+        // Se QUALQUER erro ocorreu acima, desfaz tudo como se nada tivesse acontecido.
+        console.error(`[ERRO/ROLLBACK] Falha ao cancelar pedido ${pedido_id}:`, error.message);
+        
+        if (connection) {
+            await connection.rollback();
+            console.log(`[ROLLBACK] Alterações revertidas com sucesso.`);
+        }
+
+        req.session.messages = { error: `Não foi possível cancelar: ${error.message}` };
         res.redirect('/meus-pedidos');
+
     } finally {
+        // Libera a conexão de volta para o pool para não travar o site
         if (connection) connection.release();
     }
 });
