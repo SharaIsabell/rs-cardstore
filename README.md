@@ -46,16 +46,18 @@ Esta é a forma mais simples de rodar o projeto. Você **não precisa** ter Node
 
 ### Passo a Passo
 
-1.  **Descompacte** a pasta do projeto.
-2.  Abra o terminal na pasta raiz do projeto.
-3.  Execute o comando:
+1.  **CERTIFIQUE-SE** que seu Docker está instalado
+2.  Abra o Docker Desktop (faça as operações necessárias para ir até a página Inicial)
+3.  **Descompacte** a pasta do projeto.
+4.  Abra o terminal na pasta raiz do projeto (Você pode abrir a pasta e apertar com o botão direito em algum espaço vazio para acessar o Terminal).
+5.  Execute o comando:
     ```bash
     docker-compose up --build
     ```
-4.  **Aguarde a inicialização.**
+6.  **Aguarde a inicialização.**
     * *Nota:* Na primeira vez, o Docker baixará as imagens e instalará as dependências, o que pode levar alguns minutos.
     * O script `db.js` rodará automaticamente para criar o banco e inserir os produtos.
-5.  Quando aparecer `Server running on port 3000`, acesse:
+7.  Quando aparecer `Server running on port 3000`, acesse:
     * **Loja:** [http://localhost:3000](http://localhost:3000)
 
 ---
