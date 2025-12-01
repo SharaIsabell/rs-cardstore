@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: meu-banco-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: rscardstore
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  app:
+    build: .
+    container_name: meu-app-node
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: rscardstore
+    # O 'npm start' já vai rodar o banco e depois o site, conforme seu package.json
+    command: sh -c "echo 'Aguardando Banco de Dados...' && sleep 20 && npm start"
+
+volumes:
+  mysql_data:

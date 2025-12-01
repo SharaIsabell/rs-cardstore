@@ -63,7 +63,16 @@ Esta é a forma mais simples de rodar o projeto. Você **não precisa** ter Node
     * **Loja:** [http://localhost:3000](http://localhost:3000)
 
 ---
+## Instalação Via Docker 2 (Alternativa para erro no Node) 
 
+Caso você esteja tentando rodar conforme a instalação via Docker acima, e seu sistema esteja retornando o erro:
+"Error response from daemon: Ports are not available: exposing port TCP 0.0.0.0:3306 -> 127.0.0.1:0: listen tcp 0.0.0.0:3306: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted."
+
+1.  Logo, você deve arrastar os arquivos da pasta "ALTERNATIVA-DOCKER" para a pasta do rs-cardstore mais interna
+2.  Após isso, pode deixar que o arquivos antigos sejam sobescritos
+3.  Agora, faça os mesmos passos do "Instalação Rápida (Via Docker) - Recomendado"
+
+---
 ## Instalação Manual (Para Desenvolvedores)
 
 Caso você queira rodar o projeto diretamente na sua máquina (sem Docker) para fins de desenvolvimento ou debug, siga rigorosamente os passos abaixo.
