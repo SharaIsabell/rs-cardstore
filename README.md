@@ -118,7 +118,7 @@ npm run dev
 ## Credenciais de Acesso (Admin)
 O sistema verifica se é a primeira execução e cria um administrador padrão automaticamente.
 
-URL do Admin: [http://localhost:3000/admin/login](http://localhost:3000/admin/login)
+URL do Admin: [http://localhost:3000/login](http://localhost:3000/login)
 
 E-mail: admin@rscardstore.com
 
